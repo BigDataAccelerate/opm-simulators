@@ -42,6 +42,7 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
 #include <hip/hip_runtime_api.h>
+
 #include <hip/hip_version.h>
 
 #ifdef HIP_HAVE_CUDA_DEFINED
@@ -389,7 +390,6 @@ void rocsparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatri
     HIP_CHECK(hipMalloc((void**)&d_s, sizeof(double) * N));
     HIP_CHECK(hipMalloc((void**)&d_t, sizeof(double) * N));
     HIP_CHECK(hipMalloc((void**)&d_v, sizeof(double) * N));
-
     HIP_CHECK(hipMalloc((void**)&d_Arows, sizeof(rocsparse_int) * (Nb + 1)));
     HIP_CHECK(hipMalloc((void**)&d_Acols, sizeof(rocsparse_int) * nnzb));
     HIP_CHECK(hipMalloc((void**)&d_Avals, sizeof(double) * nnz));

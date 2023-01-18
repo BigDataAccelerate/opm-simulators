@@ -217,6 +217,14 @@ else()
   endif()
 endif()
 
+find_package(rocblas)
+find_package(rocsparse)
+
+if(rocsparse_FOUND AND rocblas_FOUND)
+  set(HAVE_ROCSPARSE 1)
+  set(COMPILE_BDA_BRIDGE 1)
+endif()
+
 find_package(amgcl)
 if(amgcl_FOUND)
   set(HAVE_AMGCL 1)
