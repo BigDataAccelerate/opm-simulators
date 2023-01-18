@@ -65,7 +65,6 @@ WellContributions::create(const std::string& accelerator_mode, bool useWellConn)
 #endif
         }
         return std::make_unique<WellContributions>();
-
     }
     else if(accelerator_mode.compare("amgcl") == 0){
         if (!useWellConn) {
