@@ -344,6 +344,10 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
             ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
+    c_prec += t_prec.elapsed();
+    c_spmv += t_spmv.elapsed();
+    c_rest += t_rest.elapsed();
+    c_total1 += t_total.elapsed();
     if (verbosity >= 3) {
         std::ostringstream out;
         out << "rocsparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
@@ -351,6 +355,10 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         out << "rocsparseSolver::well:        " << t_well.elapsed() << " s\n";
         out << "rocsparseSolver::rest:        " << t_rest.elapsed() << " s\n";
         out << "rocsparseSolver::total_solve: " << res.elapsed << " s\n";
+        out << "rocsparseSolver::cum prec_apply:  " << c_prec << " s\n";
+        out << "rocsparseSolver::cum spmv:        " << c_spmv << " s\n";
+        out << "rocsparseSolver::cum rest:        " << c_rest << " s\n";
+        out << "rocsparseSolver::cum total_solve: " << c_total1 << " s\n";
         OpmLog::info(out.str());
     }
 }
@@ -428,6 +436,7 @@ void rocsparseSolverBackend<block_size>::copy_system_to_gpu(double *b) {
 
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
+        c_copy += t.elapsed();
         std::ostringstream out;
         out << "rocsparseSolver::copy_system_to_gpu(): " << t.stop() << " s";
         OpmLog::info(out.str());
@@ -450,8 +459,10 @@ void rocsparseSolverBackend<block_size>::update_system_on_gpu(double *b) {
 
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
+        c_copy += t.elapsed();
         std::ostringstream out;
-        out << "rocsparseSolver::update_system_on_gpu(): " << t.stop() << " s";
+        out << "rocsparseSolver::update_system_on_gpu(): " << t.stop() << " s\n";
+        out << "rocsparseSolver::cum copy: " << c_copy << " s";
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
@@ -549,8 +560,10 @@ bool rocsparseSolverBackend<block_size>::create_preconditioner() {
 
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
+        c_decomp += t.elapsed();
         std::ostringstream out;
-        out << "rocsparseSolver::create_preconditioner(): " << t.stop() << " s";
+        out << "rocsparseSolver::create_preconditioner(): " << t.stop() << " s\n";
+        out << "rocsparseSolver::cum decomp: " << c_decomp << " s";
         OpmLog::info(out.str());
     }
     return result;
@@ -566,8 +579,10 @@ void rocsparseSolverBackend<block_size>::solve_system(WellContributions &wellCon
 
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
+        c_total2 += t.elapsed();
         std::ostringstream out;
-        out << "rocsparseSolver::solve_system(): " << t.stop() << " s";
+        out << "rocsparseSolver::solve_system(): " << t.stop() << " s\n";
+        out << "rocsparseSolver::cum solve total2: " << c_total2 << " s";
         OpmLog::info(out.str());
     }
 
