@@ -321,7 +321,6 @@ if(USE_BDA_BRIDGE)
     list(APPEND TEST_SOURCE_FILES tests/test_rocsparseSolver.cpp)
   endif()
 endif()
-
 if(HDF5_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_HDF5File.cpp)
   list(APPEND TEST_SOURCE_FILES tests/test_HDF5Serializer.cpp)
