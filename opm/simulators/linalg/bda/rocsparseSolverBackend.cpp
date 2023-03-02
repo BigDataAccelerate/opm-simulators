@@ -42,6 +42,7 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
 #include <hip/hip_runtime_api.h>
+#include <hip/hip_version.h>
 
 #include <hip/hip_version.h>
 
