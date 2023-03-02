@@ -110,7 +110,6 @@ rocsparseSolverBackend<block_size>::rocsparseSolverBackend(int verbosity_, int m
 
     ROCSPARSE_CHECK(rocsparse_get_version(handle, &ver));
     ROCSPARSE_CHECK(rocsparse_get_git_rev(handle, rev));
-
     std::ostringstream out;
     out << "rocSPARSE version: " << ver / 100000 << "." << ver / 100 % 1000 << "."
         << ver % 100 << "-" << rev << "\n";
