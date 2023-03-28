@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
   Copyright 2023 Equinor ASA
+=======
+  Copyright 2020 Equinor ASA
+>>>>>>> Add new files rocsparseWellContributions
 
   This file is part of the Open Porous Media project (OPM).
 
