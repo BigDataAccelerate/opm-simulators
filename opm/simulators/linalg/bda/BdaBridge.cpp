@@ -231,10 +231,13 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
 
         Dune::Timer t_zeros;
         int numZeros = replaceZeroDiagonal(*bridgeMat, diagIndices);
+        static double tz_cum = 0.0;
+        double tz = 0.0;
         if (verbosity >= 2) {
-            std::ostringstream out;
-            out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
-            OpmLog::info(out.str());
+            //std::ostringstream out;
+            //out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
+            tz = t_zeros.stop();
+            //OpmLog::info(out.str());
         }
 
         if (numJacobiBlocks >= 2) {
@@ -251,11 +254,14 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
             Dune::Timer t_zeros2;
             int jacNumZeros = replaceZeroDiagonal(*jacMat, jacDiagIndices);
             if (verbosity >= 2) {
-                std::ostringstream out;
-                out << "Checking zeros for jacMat took: " << t_zeros2.stop() << " s, found " << jacNumZeros << " zeros";
-                OpmLog::info(out.str());
+                //std::ostringstream out;
+                //out << "Checking zeros for jacMat took: " << t_zeros2.stop() << " s, found " << jacNumZeros << " zeros";
+                tz += t_zeros2.stop();
+                //OpmLog::info(out.str());
             }
         }
+        tz_cum += tz;
+        std::cout << "Checking zeros cum: " << tz_cum << "(+" << tz << ")\n";
 
         /////////////////////////
         // actually solve
