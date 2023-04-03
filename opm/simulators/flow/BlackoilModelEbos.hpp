@@ -396,6 +396,10 @@ namespace Opm {
             if (!report.converged) {
                 perfTimer.reset();
                 perfTimer.start();
+                static double t_total = 0.0;
+                static double t_wells = 0.0;
+                static double t_solve = 0.0;
+                Dune::Timer t1, t2(false), t3(false);
                 report.total_newton_iterations = 1;
 
                 // Compute the nonlinear update.
@@ -408,25 +412,37 @@ namespace Opm {
                     // Apply the Schur complement of the well model to
                     // the reservoir linearized equations.
                     // Note that linearize may throw for MSwells.
+                    t2.start();
                     wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
                                           ebosSimulator().model().linearizer().residual());
+                    t_wells += t2.stop();
+                    std::cout << "BlackoilModelEbos::nonlinearIteration cum well time: " << t_wells << "\n";
 
-                    // ---- Solve linear system ----
+                    t3.start();
                     solveJacobianSystem(x);
-
+                    t_solve += t3.stop();
+                    std::cout << "BlackoilModelEbos::nonlinearIteration cum solve time: " << t_solve << "\n";
+                    std::cout << "BlackoilModelEbos::report.linear_solve_time 1: " << report.linear_solve_time << "\n";
                     report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
+                    std::cout << "BlackoilModelEbos::report.linear_solve_time 2: " << report.linear_solve_time << "\n";
                     report.total_linear_iterations += linearIterationsLastSolve();
                 }
                 catch (...) {
                     report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
+                    static double t_fail = 0.0;
+                    t_fail += report.linear_solve_time;
+                    std::cout << "BlackoilModelEbos fail cum time: " << t_fail << "(+" << report.linear_solve_time << ")\n";
                     report.total_linear_iterations += linearIterationsLastSolve();
 
                     failureReport_ += report;
                     throw; // re-throw up
                 }
 
+
+                t_total += t1.stop();
+                std::cout << "BlackoilModelEbos::nonlinearIteration cum time: " << t_total << "(+" << t1.elapsed() << ")\n";
                 perfTimer.reset();
                 perfTimer.start();
 
@@ -591,7 +607,7 @@ namespace Opm {
         /// r is the residual.
         void solveJacobianSystem(BVector& x)
         {
-
+            static double t_total = 0.0, t_prepare = 0.0;
             auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
@@ -610,20 +626,25 @@ namespace Opm {
                 x = 0.0;
                 std::vector<BVector> x_trial(numSolvers, x);
                 for (int solver = 0; solver < numSolvers; ++solver) {
+                    t_total = 0.0; t_prepare = 0.0;
                     BVector x0(x);
                     ebosSolver.setActiveSolver(solver);
                     perfTimer.start();
                     ebosSolver.prepare(ebosJac, ebosResid);
                     setupTimes[solver] = perfTimer.stop();
+                    t_prepare += setupTimes[solver];
                     perfTimer.reset();
                     ebosSolver.setResidual(ebosResid);
                     perfTimer.start();
                     ebosSolver.solve(x_trial[solver]);
                     times[solver] = perfTimer.stop();
+                    t_total += times[solver];
                     perfTimer.reset();
                     if (terminal_output_) {
                         OpmLog::debug(fmt::format("Solver time {}: {}", solver, times[solver]));
                     }
+                    std::cout << solver << "-BlackoilModelEbos::solveJacobianSystem cum prepare time: " << t_prepare << "\n";
+                    std::cout << solver << "-BlackoilModelEbos::solveJacobianSystem cum solve time: " << t_total << "\n";
                 }
 
                 int fastest_solver = std::min_element(times.begin(), times.end()) - times.begin();
@@ -632,7 +653,7 @@ namespace Opm {
                 linear_solve_setup_time_ = setupTimes[fastest_solver];
                 x = x_trial[fastest_solver];
                 ebosSolver.setActiveSolver(fastest_solver);
-
+                
             } else {
 
                 // set initial guess
@@ -642,12 +663,18 @@ namespace Opm {
                 perfTimer.start();
                 ebosSolver.prepare(ebosJac, ebosResid);
                 linear_solve_setup_time_ = perfTimer.stop();
+                t_prepare = linear_solve_setup_time_;
                 ebosSolver.setResidual(ebosResid);
+                perfTimer.reset();
+                perfTimer.start();
                 // actually, the error needs to be calculated after setResidual in order to
                 // account for parallelization properly. since the residual of ECFV
                 // discretizations does not need to be synchronized across processes to be
                 // consistent, this is not relevant for OPM-flow...
                 ebosSolver.solve(x);
+                t_total = perfTimer.stop();
+                std::cout << "BlackoilModelEbos::solveJacobianSystem cum prepare time: " << t_prepare << "\n";
+                std::cout << "BlackoilModelEbos::solveJacobianSystem cum solve time: " << t_total << "\n";
             }
        }
 
