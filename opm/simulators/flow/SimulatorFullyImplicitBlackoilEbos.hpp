@@ -309,6 +309,8 @@ public:
         // Main simulation loop.
         while (!timer.done()) {
             bool continue_looping = runStep(timer);
+            // static int NN=0;
+            // if(NN++>6)break;
             if (!continue_looping) break;
         }
         return finalize();
@@ -441,6 +443,9 @@ public:
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
             auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr);
             report_ += stepReport;
+            stepReport.reportFullyImplicit(std::cout);
+            report_.reportFullyImplicit(std::cout);
+            //std::cout << "SimFI::report.linear_solve_time 2: " << report_.linear_solve_time << "\n";
             //Pass simulation report to eclwriter for summary output
             ebosSimulator_.problem().setSimulationReport(report_);
         } else {

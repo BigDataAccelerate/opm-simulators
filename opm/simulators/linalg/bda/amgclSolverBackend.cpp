@@ -401,7 +401,6 @@ SolverStatus amgclSolverBackend<1>::solve_system([[maybe_unused]] std::shared_pt
     OPM_THROW(std::logic_error, "amgclSolverBackend not implemented for sz 1");
 }
 
-
 #define INSTANTIATE_BDA_FUNCTIONS(n)                                                                \
 template amgclSolverBackend<n>::amgclSolverBackend(int, int, double, unsigned int, unsigned int);   \
 

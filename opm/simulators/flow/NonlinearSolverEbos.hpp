@@ -215,7 +215,10 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
                     // Do the nonlinear step. If we are in a converged state, the
                     // model will usually do an early return without an expensive
                     // solve, unless the minIter() count has not been reached yet.
+                    static double t_total = 0.0;
                     auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
+                    t_total += iterReport.linear_solve_time;
+                    std::cout << "NonlinearSolver::step() success cum time: " << t_total << "(+" << iterReport.linear_solve_time << ")\n";
                     iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
                     report.converged = iterReport.converged;
@@ -228,6 +231,9 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
                     // count as a failure as well
                     failureReport_ = report;
                     failureReport_ += model_->failureReport();
+                    static double t_fail = 0.0;
+                    t_fail += failureReport_.linear_solve_time;
+                    std::cout << "NonlinearSolver::step() fail cum time: " << t_fail << "(+" << failureReport_.linear_solve_time << ")\n";
                     throw;
                 }
             }
