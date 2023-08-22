@@ -93,6 +93,7 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
 
     // Use ILU0 configuration.
     if (conf == "ilu0") {
+std::cout << " >>>>>>>>>>>> WE use ilu0 configuration!!!\n";//Razvan
         return setupILU(conf, p);
     }
 

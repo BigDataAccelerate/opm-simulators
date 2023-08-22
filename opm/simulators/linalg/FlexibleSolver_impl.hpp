@@ -157,6 +157,7 @@ namespace Dune
         const int maxiter = prm.get<int>("maxiter", 200);
         const int verbosity = is_iorank ? prm.get<int>("verbosity", 0) : 0;
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
+std::cout<<">>>>>>>>>>>>>>> Razvan message: Checking solver type = " << solver_type << std::endl; 
         if (solver_type == "bicgstab") {
             linsolver_ = std::make_shared<Dune::BiCGSTABSolver<VectorType>>(*linearoperator_for_solver_,
                                                                             *scalarproduct_,
