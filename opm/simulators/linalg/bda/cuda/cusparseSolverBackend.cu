@@ -108,12 +108,16 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
     cublasDcopy(cublasHandle, n, d_r, 1, d_p, 1);
     cublasDnrm2(cublasHandle, n, d_r, 1, &norm_0);
 
-    if (verbosity > 1) {
+    if (verbosity > 2) {
         std::ostringstream out;
         out << std::scientific << "cusparseSolver initial norm: " << norm_0;
         OpmLog::info(out.str());
     }
 
+    if (verbosity >= 3) {
+        t_rest.start();
+    }
+    
     for (it = 0.5; it < maxit; it += 0.5) {
         rhop = rho;
         cublasDdot(cublasHandle, n, d_rw, 1, d_r, 1, &rho);
@@ -126,6 +130,13 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
             cublasDaxpy(cublasHandle, n, &one, d_r, 1, d_p, 1);
         }
 
+        if (verbosity >= 3) {
+//TODO-razvan: do I need to sync here?  HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_rest.stop();
+            t_prec.start();
+        }
+
         // apply ilu0
         cusparseDbsrsv2_solve(cusparseHandle, order, \
                               operation, Nb, nnzbs_prec, &one, \
@@ -133,15 +144,36 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
         cusparseDbsrsv2_solve(cusparseHandle, order, \
                               operation, Nb, nnzbs_prec, &one, \
                               descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, d_t, d_pw, policy, d_buffer);
+        
+        if (verbosity >= 3) {
+//TODO-razvan: do I need to sync here?  HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_prec.stop();
+            t_spmv.start();
+        }
 
         // spmv
         cusparseDbsrmv(cusparseHandle, order, \
                        operation, Nb, Nb, nnzb, \
                        &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_pw, &zero, d_v);
 
+        if (verbosity >= 3) {
+//             HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_spmv.stop();
+            t_well.start();
+        }
+        
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
             static_cast<WellContributionsCuda&>(wellContribs).apply(d_pw, d_v);
+        }
+
+        if (verbosity >= 3) {
+//             HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_well.stop();
+            t_rest.start();
         }
 
         cublasDdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
@@ -151,6 +183,12 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
         cublasDaxpy(cublasHandle, n, &alpha, d_pw, 1, d_x, 1);
         cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
 
+        if (verbosity >= 3) {
+//             HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_rest.stop();
+        }
+        
         if (norm < tolerance * norm_0) {
             break;
         }
@@ -158,6 +196,9 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
         it += 0.5;
 
         // apply ilu0
+        if (verbosity >= 3) {
+            t_prec.start();
+        }
         cusparseDbsrsv2_solve(cusparseHandle, order, \
                               operation, Nb, nnzbs_prec, &one, \
                               descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, d_r, d_t, policy, d_buffer);
@@ -165,14 +206,34 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
                               operation, Nb, nnzbs_prec, &one, \
                               descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, d_t, d_s, policy, d_buffer);
 
+        if (verbosity >= 3) {
+//TODO: I need sync here!!!             HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_prec.stop();
+            t_spmv.start();
+        }
+        
         // spmv
         cusparseDbsrmv(cusparseHandle, order, \
                        operation, Nb, Nb, nnzb, &one, descr_M, \
                        d_bVals, d_bRows, d_bCols, block_size, d_s, &zero, d_t);
 
+        if(verbosity >= 3){
+//             HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_spmv.stop();
+            t_well.start();
+        }
+        
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
             static_cast<WellContributionsCuda&>(wellContribs).apply(d_s, d_t);
+        }
+        if (verbosity >= 3) {
+//             HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_well.stop();
+            t_rest.start();
         }
 
         cublasDdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
@@ -184,6 +245,11 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
         cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
 
+        if (verbosity >= 3) {
+//             HIP_CHECK(hipStreamSynchronize(stream));
+            cudaDeviceSynchronize();     
+            t_rest.stop();
+        }
 
         if (norm < tolerance * norm_0) {
             break;
@@ -202,12 +268,33 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
     res.elapsed = t_total.stop();
     res.converged = (it != (maxit + 0.5));
 
-    if (verbosity > 0) {
+    if (verbosity > 1) {
         std::ostringstream out;
         out << "=== converged: " << res.converged << ", conv_rate: " << res.conv_rate << ", time: " << res.elapsed << \
             ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
+
+    c_prec += t_prec.elapsed();
+    c_spmv += t_spmv.elapsed();
+    c_rest += t_rest.elapsed();
+    c_total1 += t_total.elapsed();
+
+    if (verbosity >= 3) {
+        std::ostringstream out;
+        out << "cusparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
+        out << "cusparseSolver::spmv:        " << t_spmv.elapsed() << " s\n";
+        out << "cusparseSolver::well:        " << t_well.elapsed() << " s\n";
+        out << "cusparseSolver::rest:        " << t_rest.elapsed() << " s\n";
+        out << "cusparseSolver::total_solve: " << res.elapsed << " s\n";
+        
+        out << "cusparseSolver::cum prec_apply:  " << c_prec << " s\n";
+        out << "cusparseSolver::cum spmv:        " << c_spmv << " s\n";
+        out << "cusparseSolver::cum rest:        " << c_rest << " s\n";
+        out << "cusparseSolver::cum total_solve: " << c_total1 << " s\n";
+
+        OpmLog::info(out.str());
+    }    
 }
 
 
@@ -470,10 +557,13 @@ bool cusparseSolverBackend<block_size>::create_preconditioner() {
 
     if (verbosity > 2) {
         cudaStreamSynchronize(stream);
+        c_decomp += t.elapsed();
         std::ostringstream out;
         out << "cusparseSolver::create_preconditioner(): " << t.stop() << " s";
         OpmLog::info(out.str());
-    }
+        out << "cusparseSolver::cum decomp: " << c_decomp << " s";
+        OpmLog::info(out.str());
+   }
     return true;
 } // end create_preconditioner()
 

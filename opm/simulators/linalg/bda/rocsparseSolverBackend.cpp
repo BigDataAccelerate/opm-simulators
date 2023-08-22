@@ -189,6 +189,7 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
     if (verbosity >= 3) {
         t_rest.start();
     }
+    
     for (it = 0.5; it < maxit; it += 0.5) {
         rhop = rho;
         ROCBLAS_CHECK(rocblas_ddot(blas_handle, N, d_rw, 1, d_r, 1, &rho));
@@ -200,6 +201,7 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
             ROCBLAS_CHECK(rocblas_dscal(blas_handle, N, &beta, d_p, 1));
             ROCBLAS_CHECK(rocblas_daxpy(blas_handle, N, &one, d_r, 1, d_p, 1));
         }
+        
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_rest.stop();
@@ -253,6 +255,7 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         ROCBLAS_CHECK(rocblas_daxpy(blas_handle, N, &nalpha, d_v, 1, d_r, 1));
         ROCBLAS_CHECK(rocblas_daxpy(blas_handle, N, &alpha, d_pw, 1, d_x, 1));
         ROCBLAS_CHECK(rocblas_dnrm2(blas_handle, N, d_r, 1, &norm));
+
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_rest.stop();
