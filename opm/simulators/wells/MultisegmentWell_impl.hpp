@@ -353,9 +353,9 @@ std::cout << "---out: MultisegmentWell<TypeTag>::apply(..) (addWells = FALSE) //
                 // flux for each perforation
                 std::vector<Scalar> mob(this->num_components_, 0.);
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
-                double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
-                const double Tw = this->well_index_[perf] * trans_mult;
-
+                const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
+                const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+                const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
                 const Scalar seg_pressure = segment_pressure[seg];
                 std::vector<Scalar> cq_s(this->num_components_, 0.);
                 Scalar perf_press = 0.0;
@@ -1188,8 +1188,9 @@ std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRU
                 }
 
                 // the well index associated with the connection
-                const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
-
+                const double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
+                const auto& wellstate_nupcol = ebos_simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+                const double tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);  
                 std::vector<double> ipr_a_perf(this->ipr_a_.size());
                 std::vector<double> ipr_b_perf(this->ipr_b_.size());
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
@@ -1688,7 +1689,8 @@ std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRU
                 std::vector<EvalWell> mob(this->num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
-                const double Tw = this->well_index_[perf] * trans_mult;
+                const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+                const double Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<EvalWell> cq_s(this->num_components_, 0.0);
                 EvalWell perf_press;
                 PerforationRates perfRates;
@@ -2000,7 +2002,8 @@ std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRU
                 std::vector<Scalar> mob(this->num_components_, 0.0);
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
-                const double Tw = this->well_index_[perf] * trans_mult;
+                const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+                const double Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<Scalar> cq_s(this->num_components_, 0.0);
                 Scalar perf_press = 0.0;
                 PerforationRates perf_rates;

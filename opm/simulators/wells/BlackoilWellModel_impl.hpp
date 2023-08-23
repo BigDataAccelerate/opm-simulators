@@ -608,6 +608,11 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
                 well->updateWaterThroughput(dt, this->wellState());
             }
         }
+        // update connection transmissibility factor and d factor (if applicable) in the wellstate
+        for (const auto& well : well_container_) {
+            well->updateConnectionTransmissibilityFactor(ebosSimulator_, this->wellState().well(well->indexOfWell()));
+            well->updateConnectionDFactor(ebosSimulator_, this->wellState().well(well->indexOfWell()));
+        }
 
         if (Indices::waterEnabled) {
             this->updateFiltrationParticleVolume(dt, FluidSystem::waterPhaseIdx);
