@@ -1915,7 +1915,8 @@ std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRU
                                         deferred_logger);
             } else {
                 const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
-                this->assemblePressureEq(seg, unit_system, well_state, this->param_.use_average_density_ms_wells_, deferred_logger);
+                const auto& summary_state = ebosSimulator.vanguard().summaryState();
+                this->assemblePressureEq(seg, unit_system, well_state, summary_state, this->param_.use_average_density_ms_wells_, deferred_logger);
             }
         }
 
