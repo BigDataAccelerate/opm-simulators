@@ -74,6 +74,8 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 #if HAVE_CUDA
         use_gpu = true;
         backend.reset(new Opm::Accelerator::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, deviceID));
+std::cout << " in BdaBridge::CONSTRUCTOR  --> block_size = " << block_size << std::endl;exit(0);//Razvan
+        
 #else
         OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
 #endif

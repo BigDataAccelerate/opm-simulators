@@ -421,6 +421,9 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<Block
 
     if (verbosity > 2) {
         cudaStreamSynchronize(stream);
+        
+        c_copy += t.elapsed();
+        
         std::ostringstream out;
         out << "cusparseSolver::copy_system_to_gpu(): " << t.stop() << " s";
         OpmLog::info(out.str());
@@ -455,8 +458,12 @@ void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<Blo
 
     if (verbosity > 2) {
         cudaStreamSynchronize(stream);
+
+        c_copy += t.elapsed();
         std::ostringstream out;
         out << "cusparseSolver::update_system_on_gpu(): " << t.stop() << " s";
+        out << "cusparseSolver::cum copy: " << c_copy << " s";
+        
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
