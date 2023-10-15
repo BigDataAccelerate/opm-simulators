@@ -388,7 +388,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             Dune::Timer t;
             static double t_total = 0.0;
             static double t_conv = 0.0;
-            calls_ += 1;
             // Write linear system if asked for.
             const int verbosity = prm_[activeSolverNum_].get("verbosity", 0);
             const bool write_matrix = verbosity > 10;
