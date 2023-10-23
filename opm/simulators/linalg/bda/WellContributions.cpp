@@ -36,6 +36,8 @@
 #include <opm/simulators/linalg/bda/rocsparseWellContributions.hpp>
 #endif
 
+#include <iostream>//Razvan
+
 namespace Opm
 {
 
@@ -109,6 +111,7 @@ void WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
     dim = dim_;
     dim_wells = dim_wells_;
 
+// std::cout << "   in WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_), where dim_ = StandardWell<TypeTag>::Indices::numEq and dim_wells_ = StandardWell<TypeTag>::numStaticWellEq --> dim_ = " << dim_ << " and dim_wells_ = " << dim_wells_ << std::endl;exit(0);//Razvan
     if(dim != 3 || dim_wells != 4){
         OPM_THROW(std::logic_error,
                   "WellContributions::setBlockSize error: "

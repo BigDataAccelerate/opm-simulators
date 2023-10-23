@@ -73,6 +73,16 @@ private:
     std::vector<cl::Event> events;
     cl_int err;
 
+    //Dune::Timer tc_total, tc_prec, tc_spmv, tc_rest;
+    double c_total1 = 0.0;
+    double c_total2 = 0.0;
+    double c_prec = 0.0;
+    double c_spmv = 0.0;
+    double c_rest = 0.0;
+    double c_copy = 0.0;
+    double c_decomp = 0.0;
+    double c_result = 0.0;
+   
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
