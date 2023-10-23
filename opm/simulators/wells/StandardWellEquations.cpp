@@ -148,12 +148,14 @@ void StandardWellEquations<Scalar,numEq>::apply(const BVector& x, BVector& Ax) c
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::apply(BVector& r) const
 {
+// std::cout << "#####in : StandardWellEquations::apply (addwells = FALSE)//from StandardWellEquations.cpp (call mv && mmtv)\n";//Razvan
     assert(invDrw_.size() == invDuneD_.N());
 
     // invDrw_ = invDuneD_ * resWell_
     invDuneD_.mv(resWell_, invDrw_);
     // r = r - duneC_^T * invDrw_
     duneC_.mmtv(invDrw_, r);
+// std::cout << "#####out: StandardWellEquations::apply (addwells = FALSE)//from StandardWellEquations.cpp (call mv && mmtv)\n";//Razvan
 }
 
 template<class Scalar, int numEq>
@@ -200,6 +202,7 @@ void StandardWellEquations<Scalar,numEq>::
 extract(const int numStaticWellEq,
         WellContributions& wellContribs) const
 {
+// std::cout << "-----in : StandardWellEquations<Scalar,numEq>::extract(const int numStaticWellEq, WellContributions& wellContribs) const --> with numStaticWellEq = " << numStaticWellEq << " and numEq = " << numEq << std::endl;//Razvan
     std::vector<int> colIndices;
     std::vector<double> nnzValues;
     colIndices.reserve(duneB_.nonzeroes());
@@ -247,6 +250,7 @@ extract(const int numStaticWellEq,
     }
     wellContribs.addMatrix(WellContributions::MatrixType::B,
                            colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
+// std::cout << "-----out: StandardWellEquations<Scalar,numEq>::extract(const int numStaticWellEq, WellContributions& wellContribs) const --> with numStaticWellEq = " << numStaticWellEq << " and numEq = " << numEq << std::endl;//Razvan
 }
 #endif
 
@@ -255,6 +259,7 @@ template<class SparseMatrixAdapter>
 void StandardWellEquations<Scalar,numEq>::
 extract(SparseMatrixAdapter& jacobian) const
 {
+// std::cout << "-----in : StandardWellEquations::extract (addwells = TRUE)//from StandardWellEquations.cpp\n";//Razvan
     // We need to change matrx A as follows
     // A -= C^T D^-1 B
     // D is diagonal
@@ -273,8 +278,10 @@ extract(SparseMatrixAdapter& jacobian) const
             detail::multMatrix(invDuneD_[0][0], (*colB), tmp);
             detail::negativeMultMatrixTransposed((*colC), tmp, tmpMat);
             jacobian.addToBlock(row_index, colB.index(), tmpMat);
+//std::cout << " add to block called \n";
         }
     }
+// std::cout << "-----out: StandardWellEquations<Scalar,numEq>::extract(const int numStaticWellEq, WellContributions& wellContribs) const (adwells = TRUE) --> with numEq = " << numEq << std::endl;//Razvan
 }
 
 template<class Scalar, int numEq>

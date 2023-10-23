@@ -190,7 +190,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     if (verbosity >= 3){
         std::ostringstream out;
-        out << "BILU0 memcpy: " << t_copy.stop() << " s";
+        out << "-------BILU0 memcpy: " << t_copy.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -232,7 +232,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "BILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
+        out << "-------BILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -251,7 +251,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     if (verbosity >= 3) {
         queue->finish();
-        out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
+        out << "-------BILU0 decomposition: " << t_decomposition.stop() << " s";
         OpmLog::info(out.str());
     }
 #endif // CHOW_PATEL

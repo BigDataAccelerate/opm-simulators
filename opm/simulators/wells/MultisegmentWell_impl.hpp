@@ -220,16 +220,19 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+std::cout << "---in : MultisegmentWell<TypeTag>::apply(..) (addWells = FALSE) //from MultisegmentWell_impl.hpp\n";//Razvan
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) {
             return;
         }
 
         if (this->param_.matrix_add_well_contributions_) {
             // Contributions are already in the matrix itself
+std::cout << "#### return because wellcontrib are already added to the matrix!\n";//Razvan
             return;
         }
 
         this->linSys_.apply(x, Ax);
+std::cout << "---out: MultisegmentWell<TypeTag>::apply(..) (addWells = FALSE) //from MultisegmentWell_impl.hpp\n";//Razvan
     }
 
 
@@ -241,11 +244,14 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     apply(BVector& r) const
     {
+std::cout << "---in : MultisegmentWell<TypeTag>::apply(..) (addWells = FALSE) //from MultisegmentWell_impl.hpp\n";//Razvan
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) {
             return;
         }
+std::cout << "!!!!!!!!!!! TODO: fix bug when this->param_.matrix_add_well_contributions_ is TRUE(=1) --> we should return not continue with apply!!!!!!!!!!!! " << this->param_.matrix_add_well_contributions_ << std::endl;//Razvan
 
         this->linSys_.apply(r);
+std::cout << "---out: MultisegmentWell<TypeTag>::apply(..) (addWells = FALSE) //from MultisegmentWell_impl.hpp\n";//Razvan
     }
 
 
@@ -823,7 +829,9 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     addWellContributions(SparseMatrixAdapter& jacobian) const
     {
+std::cout << "---in : MultisegmentWell::addWellContributions(..) (addWells = TRUE) //from MultisegmentWell_impl.hpp\n";//Razvan
         this->linSys_.extract(jacobian);
+std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRUE) //from MultisegmentWell_impl.hpp\n";//Razvan
     }
 
 

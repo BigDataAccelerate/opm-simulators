@@ -153,10 +153,12 @@ template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 apply(BVector& r) const
 {
+std::cout << "#####in : MultisegmentWellEquations::apply (addwells = FALSE)//from MultisegmentWellEquations.cpp (call umfPack && mmtv)\n";//Razvan
     // invDrw_ = duneD^-1 * resWell_
     const BVectorWell invDrw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell_);
     // r = r - duneC_^T * invDrw
     duneC_.mmtv(invDrw, r);
+std::cout << "#####out: MultisegmentWellEquations::apply (addwells = FALSE)//from MultisegmentWellEquations.cpp (call umfPack && mmtv)\n";//Razvan
 }
 
 template<class Scalar, int numWellEq, int numEq>
@@ -204,6 +206,7 @@ template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 extract(WellContributions& wellContribs) const
 {
+std::cout << "-----in : MultisegmentWellEquations::extract (addwells = TRUE)//from MultisegmentWellEquations.cpp\n";//Razvan
     unsigned int Mb = duneB_.N();       // number of blockrows in duneB_, duneC_ and duneD_
     unsigned int BnumBlocks = duneB_.nonzeroes();
     unsigned int DnumBlocks = duneD_.nonzeroes();
@@ -265,6 +268,7 @@ extract(WellContributions& wellContribs) const
                                                  Dcols,
                                                  Drows,
                                                  Cvals);
+std::cout << "-----out: MultisegmentWellEquations::extract (addwells = TRUE)//from MultisegmentWellEquations.cpp\n";//Razvan
 }
 #endif
 
@@ -273,6 +277,7 @@ template<class SparseMatrixAdapter>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 extract(SparseMatrixAdapter& jacobian) const
 {
+std::cout << "-----in : MultisegmentWellEquations::extract (addwells = TRUE)//from MultisegmentWellEquations.cpp\n";//Razvan
     const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(duneD_.M(),
                                                                         numWellEq,
                                                                         *duneDSolver_);
@@ -302,6 +307,7 @@ extract(SparseMatrixAdapter& jacobian) const
             }
         }
     }
+std::cout << "-----out: MultisegmentWellEquations::extract (addwells = TRUE)//from MultisegmentWellEquations.cpp\n";//Razvan
 }
 
 template<class Scalar, int numWellEq, int numEq>

@@ -74,7 +74,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 #if HAVE_CUDA
         use_gpu = true;
         backend.reset(new Opm::Accelerator::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, deviceID));
-std::cout << " in BdaBridge::CONSTRUCTOR  --> block_size = " << block_size << std::endl;exit(0);//Razvan
+// std::cout << " in BdaBridge::CONSTRUCTOR  --> block_size = " << block_size << std::endl;exit(0);//Razvan
         
 #else
         OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
@@ -268,8 +268,10 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
         /////////////////////////
         // actually solve
         // assume that underlying data (nonzeroes) from b (Dune::BlockVector) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
+        Dune::Timer t_bridge;
         SolverStatus status = backend->solve_system(matrix, static_cast<double*>(&(b[0][0])), jacMatrix, wellContribs, result);
-
+        std::cout << " call to backend->solve_system took : " << t_bridge.stop() << "\n";
+        
         switch(status) {
         case SolverStatus::BDA_SOLVER_SUCCESS:
             //OpmLog::info("BdaSolver converged");

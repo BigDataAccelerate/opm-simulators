@@ -415,7 +415,7 @@ namespace Opm {
                                                        const SimulatorTimerInterface& timer,
                                                        NonlinearSolverType& nonlinear_solver)
         {
-
+static int itercount=0;//Razvan
             // -----------   Set up reports and timer   -----------
             SimulatorReportSingle report;
             Dune::Timer perfTimer;
@@ -447,9 +447,10 @@ namespace Opm {
                                           ebosSimulator().model().linearizer().residual());
                     t_wells += t2.stop();
                     std::cout << "BlackoilModelEbos::nonlinearIteration cum well time: " << t_wells << "\n";
+// std::cout<<"exit after wellModel().linearize in BlackoilModelEbos\n";exit(0);
 
                     t3.start();
-                    solveJacobianSystem(x);
+                    solveJacobianSystem(x); 
                     t_solve += t3.stop();
                     std::cout << "BlackoilModelEbos::nonlinearIteration cum solve time: " << t_solve << "\n";
                     std::cout << "BlackoilModelEbos::report.linear_solve_time 1: " << report.linear_solve_time << "\n";
@@ -472,9 +473,11 @@ namespace Opm {
 
 
                 t_total += t1.stop();
-                std::cout << "BlackoilModelEbos::nonlinearIteration cum time: " << t_total << "(+" << t1.elapsed() << ")\n";
+                std::cout << "========== BlackoilModelEbos::nonlinearIteration cum time: " << t_total << "(+" << t1.elapsed() << ") ========\n";
                 perfTimer.reset();
                 perfTimer.start();
+itercount++;//Razvan
+if(itercount == 1){std::cout<<"exit after solveJacobianSystem(x) in BlackoilModelEbos\n"; exit(0);}//Razvan
 
                 // handling well state update before oscillation treatment is a decision based
                 // on observation to avoid some big performance degeneration under some circumstances.

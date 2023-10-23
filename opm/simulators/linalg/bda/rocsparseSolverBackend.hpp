@@ -91,6 +91,7 @@ private:
     double c_rest = 0.0;
     double c_copy = 0.0;
     double c_decomp = 0.0;
+    double c_result = 0.0;
 
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A

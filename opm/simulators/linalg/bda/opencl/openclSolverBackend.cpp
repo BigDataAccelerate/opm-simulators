@@ -244,6 +244,10 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     // if initial x guess is not 0, must call applyblockedscaleadd(), not implemented
     //applyblockedscaleadd(-1.0, mat, x, r);
 
+    if (verbosity >= 3) {
+        t_rest.start();
+    }
+
     // set initial values
     events.resize(5);
     queue->enqueueFillBuffer(d_p, 0, 0, sizeof(double) * N, nullptr, &events[0]);
@@ -266,6 +270,9 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     norm = OpenclKernels::norm(d_r, d_tmp, N);
     norm_0 = norm;
 
+    if (verbosity >= 3) {
+        t_rest.stop();
+    }
     if (verbosity > 1) {
         std::ostringstream out;
         out << std::scientific << "openclSolver initial norm: " << norm_0;
@@ -394,14 +401,24 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
+    c_prec += t_prec.elapsed();
+    c_spmv += t_spmv.elapsed();
+    c_rest += t_rest.elapsed();
+    c_total1 += t_total.elapsed();
+
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "openclSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
-        out << "wellContributions::apply:  " << t_well.elapsed() << " s\n";
-        out << "openclSolver::spmv:        " << t_spmv.elapsed() << " s\n";
-        out << "openclSolver::rest:        " << t_rest.elapsed() << " s\n";
-        out << "openclSolver::total_solve: " << res.elapsed << " s\n";
-        OpmLog::info(out.str());
+//TODO change naming
+        out << "-----openclSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
+        out << "-----wellContributions::apply:  " << t_well.elapsed() << " s\n";
+        out << "-----openclSolver::spmv:        " << t_spmv.elapsed() << " s\n";
+        out << "-----openclSolver::rest:        " << t_rest.elapsed() << " s\n";
+        out << "---openclSolver::total_solve: " << res.elapsed << " s\n";
+        out << "-----openclSolver::cum prec_apply:  " << c_prec << " s\n";
+        out << "-----openclSolver::cum spmv:        " << c_spmv << " s\n";
+        out << "-----openclSolver::cum rest:        " << c_rest << " s\n";
+        out << "---openclSolver::cum total_solve: " << c_total1 << " s\n";
+       OpmLog::info(out.str());
     }
 }
 
@@ -497,8 +514,10 @@ void openclSolverBackend<block_size>::copy_system_to_gpu() {
     }
 
     if (verbosity > 2) {
+        queue->finish();
+        c_copy += t.stop();
         std::ostringstream out;
-        out << "openclSolver::copy_system_to_gpu(): " << t.stop() << " s";
+        out << "---openclSolver::copy_system_to_gpu(): " << t.elapsed() << " s";
         OpmLog::info(out.str());
     }
 } // end copy_system_to_gpu()
@@ -532,8 +551,11 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
     }
 
     if (verbosity > 2) {
+        queue->finish();
+        c_copy += t.stop();
         std::ostringstream out;
-        out << "openclSolver::update_system_on_gpu(): " << t.stop() << " s";
+        out << "-----openclSolver::update_system_on_gpu(): " << t.elapsed() << " s\n";
+        out << "---openclSolver::cum copy: " << c_copy << " s";
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
@@ -550,8 +572,9 @@ bool openclSolverBackend<block_size>::analyze_matrix() {
         success = prec->analyze_matrix(mat.get());
 
     if (verbosity > 2) {
+        queue->finish();
         std::ostringstream out;
-        out << "openclSolver::analyze_matrix(): " << t.stop() << " s";
+        out << "---openclSolver::analyze_matrix(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -569,8 +592,9 @@ void openclSolverBackend<block_size>::update_system(double *vals, double *b) {
     h_b = b;
 
     if (verbosity > 2) {
+        queue->finish();
         std::ostringstream out;
-        out << "openclSolver::update_system(): " << t.stop() << " s";
+        out << "---openclSolver::update_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
 } // end update_system()
@@ -587,8 +611,11 @@ bool openclSolverBackend<block_size>::create_preconditioner() {
         result = prec->create_preconditioner(mat.get());
 
     if (verbosity > 2) {
+        queue->finish();
+        c_decomp += t.stop();
         std::ostringstream out;
-        out << "openclSolver::create_preconditioner(): " << t.stop() << " s";
+        out << "-----openclSolver::create_preconditioner(): " << t.elapsed() << " s\n";
+        out << "---openclSolver::cum decomp: " << c_decomp << " s";
         OpmLog::info(out.str());
     }
     return result;
@@ -614,9 +641,12 @@ void openclSolverBackend<block_size>::solve_system(WellContributions &wellContri
     }
 
     if (verbosity > 2) {
+        queue->finish();
+        c_total2 += t.stop();
         std::ostringstream out;
-        out << "openclSolver::solve_system(): " << t.stop() << " s";
-        OpmLog::info(out.str());
+        out << "-----openclSolver::solve_system(): " << t.elapsed() << " s\n";
+        out << "---openclSolver::cum solve total2: " << c_total2 << " s";
+       OpmLog::info(out.str());
     }
 
 } // end solve_system()
@@ -631,8 +661,11 @@ void openclSolverBackend<block_size>::get_result(double *x) {
     queue->enqueueReadBuffer(d_x, CL_TRUE, 0, sizeof(double) * N, x);
 
     if (verbosity > 2) {
+        queue->finish();
+        c_result += t.stop();
         std::ostringstream out;
-        out << "openclSolver::get_result(): " << t.stop() << " s";
+        out << "-----openclSolver::get_result(): " << t.stop() << " s\n";
+        out << "---openclSolver::cum copy get_result(): " << c_result << " s";
         OpmLog::info(out.str());
     }
 } // end get_result()

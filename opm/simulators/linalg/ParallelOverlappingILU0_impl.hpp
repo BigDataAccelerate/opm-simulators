@@ -289,7 +289,7 @@ template<class Matrix, class Domain, class Range, class ParallelInfoT>
 void ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>::
 apply (Domain& v, const Range& d)
 {
-std::cout << "      IN ParallelOverlappingILU0::apply!!\n";
+// std::cout << "      IN ParallelOverlappingILU0::apply!!\n";//Razvan
     OPM_TIMEBLOCK(apply);
     Range& md = reorderD(d);
     Domain& mv = reorderV(v);
@@ -307,6 +307,7 @@ std::cout << "      IN ParallelOverlappingILU0::apply!!\n";
         OPM_THROW(std::logic_error,"ILU: number of lower and upper rows must be the same");
     }
 
+    Dune::Timer lower_apply;
     // lower triangular solve
     for (size_type i = 0; i < lowerLoopEnd; ++i)
     {
@@ -321,6 +322,7 @@ std::cout << "      IN ParallelOverlappingILU0::apply!!\n";
 
         mv[ i ] = rhs;  // Lii = I
     }
+    std::cout << " --------opm-ilu0::lower triangular solve:  " << lower_apply.stop() << " s\n";//Razvan
 
     for (size_type i = upperLoopStart; i < iEnd; ++i)
     {
