@@ -61,7 +61,7 @@ struct BdaSolverInfo
 
   bool apply(Vector& rhs,
              const bool useWellConn,
-             WellContribFunc getContribs,
+            WellContribFunc getContribs,
              const int rank,
              Matrix& matrix,
              Vector& x,
@@ -191,9 +191,10 @@ public:
             ParentType::prepare(M,b);
         }
 
-#if HAVE_OPENCL
+#if HAVE_OPENCL //TODO-Razvan: check if this is ok??? what happens if we choose cusparse or rocsparse!!!???
         // update matrix entries for solvers.
         if (firstcall && bdaBridge_) {
+            Dune::Timer t_jacobi;
             // ebos will not change the matrix object. Hence simply store a pointer
             // to the original one with a deleter that does nothing.
             // Outch! We need to be able to scale the linear system! Hence const_cast
@@ -204,6 +205,7 @@ public:
                                this->simulator_.vanguard().schedule().getWellsatEnd(),
                                this->simulator_.vanguard().cellPartition(),
                                this->getMatrix().nonzeroes(), this->useWellConn_);
+            std::cout << "ISTLSolverEbosBDA::prepare jacobi time (opencl): " << t_jacobi.stop() << "\n";
         }
 #endif
     }
@@ -245,26 +247,45 @@ public:
         // Solve system.
         Dune::InverseOperatorResult result;
 
+        Dune::Timer t3;
         std::function<void(WellContributions&)> getContribs =
             [this](WellContributions& w)
             {
                 this->simulator_.problem().wellModel().getWellContributions(w);
             };
+        static double t_wells = 0.0;
+        t_wells += t3.stop();
+        std::cout << "ISTLSolverEbosBDA::solve cum getWells time: " << t_wells << "(+" << t3.elapsed() << ")\n";
+        
+        Dune::Timer t1;
+        static double t_total = 0.0;
         if (!bdaBridge_->apply(*(this->rhs_), this->useWellConn_, getContribs,
                               this->simulator_.gridView().comm().rank(),
                               const_cast<Matrix&>(this->getMatrix()),
                               x, result))
         {
+            Dune::Timer t5;
+            static double t_fallback = 0.0;
             if(bdaBridge_->gpuActive()){
                 // bda solve fails use istl solver setup need to be done since it is not setup in prepare
                 ParentType::prepareFlexibleSolver();
             }
+            
             assert(this->flexibleSolver_[this->activeSolverNum_].solver_);
             this->flexibleSolver_[this->activeSolverNum_].solver_->apply(x, *(this->rhs_), result);
+            t_fallback += t5.stop();
+            std::cout << "ISTLSolverEbosBDA::solve cum fallback time: " << t_fallback << "(+" << t5.elapsed() << ")\n";
         }
+        t_total += t1.stop();
+        std::cout << "ISTLSolverEbosBDA::solve cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
 
         // Check convergence, iterations etc.
+        Dune::Timer t2;
+        static double t_conv = 0.0;
         this->checkConvergence(result);
+        t_conv += t2.stop();
+        std::cout << "ISTLSolverEbosBDA::solve cum conv time: " << t_conv << "(+" << t2.elapsed() << ")\n";
+        std::cout << "ISTLSolverEbosBDA::solve cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
 
         return this->converged_;
     }

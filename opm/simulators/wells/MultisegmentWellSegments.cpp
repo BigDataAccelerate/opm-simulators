@@ -75,6 +75,7 @@ MultisegmentWellSegments(const int numSegments,
     , phase_viscosities_(numSegments, std::vector<EvalWell>(well.numComponents(), 0.0)) // number of phase here?
     , well_(well)
 {
+std::cout << " in MultisegmentWellSegments:: CONSTRUCTOR\n";//Razvan
     // since we decide to use the WellSegments from the well parser. we can reuse a lot from it.
     // for other facilities needed but not available from parser, we need to process them here
 

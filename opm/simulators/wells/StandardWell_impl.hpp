@@ -1294,15 +1294,18 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+// std::cout << "---in : StandardWell<TypeTag>::apply(..) (addWells = FALSE) //from StandardWell_impl.hpp\n";//Razvan
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
-
+// std::cout << "this->param_.matrix_add_well_contributions_ = " << this->param_.matrix_add_well_contributions_ << std::endl;//Razvan
         if (this->param_.matrix_add_well_contributions_)
         {
+// std::cout << "#### return because wellcontrib are already added to the matrix!\n";//Razvan
             // Contributions are already in the matrix itself
             return;
         }
 
         this->linSys_.apply(x, Ax);
+// std::cout << "---out: StandardWell<TypeTag>::apply(..) //from StandardWell_impl.hpp\n";//Razvan
     }
 
 
@@ -1315,6 +1318,11 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
+//         if (this->param_.matrix_add_well_contributions_)
+//         {
+// std::cout << "!!!!!!!!!!! TODO: fix bug when this->param_.matrix_add_well_contributions_ is TRUE(=1) --> we should return not continue with apply!!!!!!!!!!!! " << this->param_.matrix_add_well_contributions_ << std::endl;//Razvan
+//         }
+        
         this->linSys_.apply(r);
     }
 
@@ -1698,7 +1706,9 @@ namespace Opm
     void
     StandardWell<TypeTag>::addWellContributions(SparseMatrixAdapter& jacobian) const
     {
+// std::cout << "---in : StandardWell<TypeTag>::addWellContributions(..) (addWells = TRUE) //from StandardWell_impl.hpp\n";//Razvan
         this->linSys_.extract(jacobian);
+// std::cout << "---out: StandardWell<TypeTag>::addWellContributions(..) (addWells = TRUE) //from StandardWell_impl.hpp\n";//Razvan
     }
 
 

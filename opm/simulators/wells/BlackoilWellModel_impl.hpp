@@ -191,19 +191,29 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
+// std::cout << "-in : BlackoilWellModel<TypeTag>::linearize(..); //from BlackoilWellModel_impl.hpp\n"; //Razvan
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& well: well_container_) {
+
             // Modifiy the Jacobian with explicit Schur complement
             // contributions if requested.
             if (param_.matrix_add_well_contributions_) {
+//Razvan: We enter here when AddWellContribution = TRUE(=coupled) 
+//Razvan: We DO NOT enter here when AddWellContribution = FALSE(=separate) !!!
+// std::cout << "--before: well->addWellContributions(jacobian);  ---> param_.matrix_add_well_contributions_ = " << param_.matrix_add_well_contributions_ << std::endl;//Razvan
                 well->addWellContributions(jacobian);
+// std::cout << "--after : well->addWellContributions(jacobian);  ---> param_.matrix_add_well_contributions_ = " << param_.matrix_add_well_contributions_ << std::endl;//Razvan
             }
             // Apply as Schur complement the well residual to reservoir residuals:
             // r = r - duneC_^T * invDuneD_ * resWell_
+// std::cout << "--before: well->apply(res);  ---> param_.matrix_add_well_contributions_ = " << param_.matrix_add_well_contributions_ << std::endl;//Razvan
             well->apply(res);
+// std::cout << "--after : well->apply(res);  ---> param_.matrix_add_well_contributions_ = " << param_.matrix_add_well_contributions_ << std::endl;//Razvan
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
                                    ebosSimulator_.gridView().comm());
+
+// std::cout << "-out: BlackoilWellModel<TypeTag>::linearize(..); //from BlackoilWellModel_impl.hpp\n"; //Razvan
     }
 
 
@@ -212,6 +222,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     linearizeDomain(const Domain& domain, SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
+std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDomain\n";//Razvan
         // Note: no point in trying to do a parallel gathering
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
@@ -1495,6 +1506,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     getWellContributions(WellContributions& wellContribs) const
     {
+// std::cout << " in BlackoilWellModel<TypeTag>::getWellContributions(WellContributions& wellContribs) // from BlackoilWellModel_impl.hpp\n";//Razvan
         // prepare for StandardWells
         wellContribs.setBlockSize(StandardWell<TypeTag>::Indices::numEq, StandardWell<TypeTag>::numStaticWellEq);
 

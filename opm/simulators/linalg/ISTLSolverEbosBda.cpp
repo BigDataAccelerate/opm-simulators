@@ -97,25 +97,43 @@ apply(Vector& rhs,
 {
     bool use_gpu = bridge_->getUseGpu();
     if (use_gpu) {
+        Dune::Timer t5;
+        static double t_wells = 0.0;
         auto wellContribs = WellContributions::create(accelerator_mode_, useWellConn);
         bridge_->initWellContributions(*wellContribs, x.N() * x[0].N());
-
-         // the WellContributions can only be applied separately with CUDA, OpenCL or rocsparse, not with amgcl or rocalution
+// std::cout << "after bridge_->initWellContributions(*wellContribs, x.N() * x[0].N()); ---> x.N() * x[0].N() = " << x.N() * x[0].N() << " , where x.N() = " << x.N() << " and x[0].N() = " << x[0].N() << std::endl;//Razvan --> for norne this is x.N() * x[0].N() = 133293 , where x.N() = 44431 and x[2].N() = 3
+         // the WellContributions can only be applied separately with CUDA, OpenCL or rocsparse, not with amgcl or rocalution: useWellConn = 0 <-> --matrix-add-well-contributions=false
 #if HAVE_CUDA || HAVE_OPENCL || HAVE_ROCSPARSE
         if (!useWellConn) {
             getContribs(*wellContribs);
         }
 #endif
+        t_wells += t5.stop();
+        std::cout << "BdaSolverInfo::apply cum wells time: " << t_wells << "(+" << t5.elapsed() << ")\n";
 
         if (numJacobiBlocks_ > 1) {
+            Dune::Timer t;
+            static double t_total = 0.0;
             this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
+            t_total += t.stop();
+            std::cout << "BdaSolverInfo::apply cum copyMatToBlockJac time: " << t_total << "(+" << t.elapsed() << ")\n";
+            
+            static double t_solve = 0.0;
             // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
+            Dune::Timer t2;
             bridge_->solve_system(&matrix, blockJacobiForGPUILU0_.get(),
                                   numJacobiBlocks_, rhs, *wellContribs, result);
+            t_solve += t.stop();
+            std::cout << "BdaSolverInfo::apply cum solve_system time: " << t_solve << "(+" << t2.elapsed() << ")\n";
         }
-        else
+        else {
+            Dune::Timer t;
+            static double t_solve = 0.0;
             bridge_->solve_system(&matrix, &matrix,
                                   numJacobiBlocks_, rhs, *wellContribs, result);
+            t_solve += t.stop();
+            std::cout << "BdaSolverInfo::apply cum solve_system time: " << t_solve << "(+" << t.elapsed() << ")\n";
+        }
         if (result.converged) {
             // get result vector x from non-Dune backend, iff solve was successful
             bridge_->get_result(x);

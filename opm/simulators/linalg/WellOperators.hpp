@@ -161,18 +161,18 @@ public:
   virtual void apply( const X& x, Y& y ) const override
   {
     OPM_TIMEBLOCK(apply);
-    Dune::Timer t1;
-    static double tt1 = 0.0;
+//     Dune::Timer t1;//Razvan
+//     static double tt1 = 0.0;//Razvan
     A_.mv( x, y );
-    tt1 += t1.stop();
-    std::cout << "WellModelMatrixAdapter::apply cum spmv: " << tt1 << "(+" << t1.elapsed() << ")\n";
+//     tt1 += t1.stop();//Razvan
+//     std::cout << "WellModelMatrixAdapter::apply cum spmv: " << tt1 << "(+" << t1.elapsed() << ")\n";//Razvan
 
     // add well model modification to y
-    Dune::Timer t2;
-    static double tt2 = 0.0;
+//     Dune::Timer t2;//Razvan
+//     static double tt2 = 0.0;//Razvan
     wellOper_.apply(x, y );
-    tt2 += t2.stop();
-    std::cout << "WellModelMatrixAdapter::apply cum well: " << tt2 << "(+" << t2.elapsed() << ")\n";
+//     tt2 += t2.stop();//Razvan
+//     std::cout << "WellModelMatrixAdapter::apply cum well: " << tt2 << "(+" << t2.elapsed() << ")\n";//Razvan
 
 #if HAVE_MPI
     if( comm_ )
