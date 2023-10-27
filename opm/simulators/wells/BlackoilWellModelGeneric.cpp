@@ -932,6 +932,7 @@ BlackoilWellModelGeneric::
 assignNodeValues(std::map<std::string, data::NodeData>& nodevalues, const int reportStepIdx) const
 {
     nodevalues.clear();
+    if (reportStepIdx < 0) return;
 
     for (const auto& [node, pressure] : node_pressures_) {
         nodevalues.emplace(node, data::NodeData{pressure});
