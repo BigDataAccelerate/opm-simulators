@@ -1530,7 +1530,8 @@ std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRU
                              WellState& well_state,
                              const GroupState& group_state,
                              DeferredLogger& deferred_logger, 
-                             const bool allow_switch /*true*/)
+                             const bool fixed_control /*false*/, 
+                             const bool fixed_status /*false*/)
     {
         //if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
