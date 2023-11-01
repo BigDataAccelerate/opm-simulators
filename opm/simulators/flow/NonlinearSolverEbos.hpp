@@ -203,7 +203,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
             report += model_->prepareStep(timer);
 
             int iteration = 0;
-
+std::cout << "  in NonlinearSolver.hpp -> NonlinearSolver::step \n";//Razvan
             // Let the model do one nonlinear iteration.
 
             // Set up for main solver loop.

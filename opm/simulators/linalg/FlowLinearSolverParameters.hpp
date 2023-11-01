@@ -275,6 +275,7 @@ namespace Opm
             ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
             scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
             linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
+std::cout << " in FlowLinearSolverParameters.hpp::init(bool) -> linsolver_ = " << linsolver_ << std::endl; //exit(0);//Razvan
             linear_solver_print_json_definition_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverPrintJsonDefinition);
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
             cpr_reuse_interval_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseInterval);

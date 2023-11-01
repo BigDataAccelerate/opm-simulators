@@ -31,6 +31,8 @@
 
 #include <sstream>
 
+#include <iostream>//Razvan
+
 namespace Opm
 {
 namespace Accelerator
@@ -266,19 +268,26 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 template <unsigned int block_size>
 void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 {
+// std::cout << "------in : BILU0<block_size>::apply(..) // from BILU0.cpp\n";//Razvan
+// std::cout << "########### calling: ILU_apply1 && ILU_apply2 kernels // from BILU0.cpp\n";//Razvan
     const double relaxation = 0.9;
     cl::Event event;
-    Timer t_apply;
+    Timer t_apply, t_solveLU(false);
+    double c_solveL = 0.0, c_solveU = 0.0;
 
+    
     for (int color = 0; color < numColors; ++color) {
 #if CHOW_PATEL
         OpenclKernels::ILU_apply1(s.rowIndices, s.Lvals, s.Lcols, s.Lrows,
                                   s.diagIndex, y, x, s.rowsPerColor,
                                   color, rowsPerColor[color], block_size);
 #else
+t_solveLU.start();
         OpenclKernels::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
                                   s.diagIndex, y, x, s.rowsPerColor,
                                   color, rowsPerColor[color], block_size);
+t_solveLU.stop();
+c_solveL += t_solveLU.elapsed();t_solveLU.reset();
 #endif
     }
 
@@ -288,20 +297,28 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
                                   color, rowsPerColor[color], block_size);
 #else
+t_solveLU.start();
         OpenclKernels::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
                                   color, rowsPerColor[color], block_size);
+t_solveLU.stop();
+c_solveU += t_solveLU.elapsed();t_solveLU.reset();
 #endif
     }
+
+// std::cout << "########### calling: OpenclKernels::scale(x, relaxation, N); // from BILU0.cpp\n";//Razvan
 
     // apply relaxation
     OpenclKernels::scale(x, relaxation, N);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         std::ostringstream out;
-        out << "BILU0 apply: " << t_apply.stop() << " s";
+        out << "--------OpenclKernels::ILU_apply1() lower triangular solve time: " << c_solveL << " s\n";
+        out << "--------OpenclKernels::ILU_apply2() upper triangular solve time: " << c_solveU << " s\n";
+        out << "------BILU0 apply: " << t_apply.stop() << " s (which used " << numColors << " colors)";
         OpmLog::info(out.str());
     }
+// std::cout << "------out: BILU0<block_size>::apply(..) // from BILU0.cpp\n";//Razvan
 }
 
 

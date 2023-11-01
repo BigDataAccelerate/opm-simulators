@@ -153,7 +153,8 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
             cudaDeviceSynchronize();     
             t_onesolve.stop();
             std::ostringstream out;
-            out << "--------cusparseSolver::lower triangular solve:  " << t_onesolve.elapsed() << " s";t_onesolve.reset();
+            out << "--------cusparseSolver::lower triangular solve:  " << t_onesolve.elapsed() << " s";
+            t_onesolve.reset();
             OpmLog::info(out.str());
         }
         

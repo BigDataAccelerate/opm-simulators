@@ -335,6 +335,7 @@ public:
   CoarseLevelSolver* createCoarseLevelSolver(P& transferPolicy)
   {
     coarseOperator_=transferPolicy.getCoarseLevelOperator();
+std::cout << " in TwoLevelMethodCpr.hh before call to createCoarseLevelSolver(..)\n";//Razvan
     AMGInverseOperator* inv = new AMGInverseOperator(*coarseOperator_,
                                                      criterion_,
                                                      smootherArgs_);
@@ -420,16 +421,21 @@ public:
     : operator_(&op), smoother_(smoother),
       preSteps_(preSteps), postSteps_(postSteps)
   {
+std::cout << "---------------------------- BEGIN TwoLevelMethodCpr :: CONSTRUCTOR -----------------\n";//exit(0);//Razvan
     policy_ = policy.clone();
+std::cout << " in TwoLevelMethodCpr :: CONSTRUCTOR - before calling policy_->createCoarseLevelSystem(*operator_)\n";//exit(0);//Razvan
     policy_->createCoarseLevelSystem(*operator_);
+std::cout << " in TwoLevelMethodCpr :: CONSTRUCTOR - before calling coarseSolver_=coarsePolicy.createCoarseLevelSolver\n";//exit(0);//Razvan
     coarseSolver_=coarsePolicy.createCoarseLevelSolver(*policy_);
+std::cout << " ----------------------------- END CONSTRUCTOR TwoLevelMethodCpr -------------------\n\n";//exit(0);//Razvan
   }
 
   TwoLevelMethodCpr(const TwoLevelMethodCpr& other)
   : operator_(other.operator_), coarseSolver_(new CoarseLevelSolver(*other.coarseSolver_)),
     smoother_(other.smoother_), policy_(other.policy_->clone()),
     preSteps_(other.preSteps_), postSteps_(other.postSteps_)
-  {}
+  {std::cout << " in TwoLevelMethodCpr :: CONSTRUCTOR - 2!!!!\n";//exit(0);//Razvan
+}
 
   ~TwoLevelMethodCpr()
   {
@@ -483,16 +489,26 @@ public:
     context.rhs=&rhs;
     context.matrix=operator_;
     // Presmoothing
+std::cout << "\n---before1/5: presmooth(context, preSteps_); //in twolevelmethodcpr.hh::apply \n";//Razvan
     presmooth(context, preSteps_);
+std::cout << "---after 1/5: presmooth(context, preSteps_); //in twolevelmethodcpr.hh::apply \n";//Razvan
     //Coarse grid correction
+std::cout << "\n---before2/5: policy_->moveToCoarseLevel(*context.rhs); //in twolevelmethodcpr.hh::apply \n";//Razvan
     policy_->moveToCoarseLevel(*context.rhs);
+std::cout << "---after 2/5: policy_->moveToCoarseLevel(*context.rhs); //in twolevelmethodcpr.hh::apply \n";//Razvan
     InverseOperatorResult res;
+std::cout << "\n---before3/5: coarseSolver_->apply(policy_->getCoarseLevelLhs(), policy_->getCoarseLevelRhs(), res); //in twolevelmethodcpr.hh::apply \n";//Razvan
     coarseSolver_->apply(policy_->getCoarseLevelLhs(), policy_->getCoarseLevelRhs(), res);
+std::cout << "---after 3/5: coarseSolver_->apply(policy_->getCoarseLevelLhs(), policy_->getCoarseLevelRhs(), res); //in twolevelmethodcpr.hh::apply \n";//Razvan
     *context.lhs=0;
+std::cout << "\n---before4/5: policy_->moveToFineLevel(*context.lhs);\n";//Razvan
     policy_->moveToFineLevel(*context.lhs);
+std::cout << "---after 4/5: policy_->moveToFineLevel(*context.lhs);\n";//Razvan
     *context.update += *context.lhs;
     // Postsmoothing
+std::cout << "\n---before5/5: postsmooth(context, preSteps_); //in twolevelmethodcpr.hh::apply \n";//Razvan
     postsmooth(context, postSteps_);
+std::cout << "---after 5/5: postsmooth(context, preSteps_); //in twolevelmethodcpr.hh::apply \n";//Razvan
 
   }
 //   //! Category of the preconditioner (see SolverCategory::Category)

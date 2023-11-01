@@ -66,6 +66,7 @@ public:
         , weights_(weights)
         , pressure_var_index_(pressure_var_index)
     {
+std::cout << " in PressureTransferPolicy.hpp :: CONSTRUCTOR\n";//Razvan
     }
 
     virtual void createCoarseLevelSystem(const FineOperator& fineOperator) override
@@ -122,6 +123,7 @@ public:
 
     virtual void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
+std::cout << "####in : PressureTransferPolicy::moveToCoarseLevel(..); //in PressureTransferPolicy.hpp \n";//Razvan
         // Set coarse vector to zero
         this->rhs_ = 0;
 
@@ -141,10 +143,13 @@ public:
         }
 
         this->lhs_ = 0;
+Dune::storeMatrixMarket(this->rhs_,"rhs.mm");
+std::cout << "####out: PressureTransferPolicy::moveToCoarseLevel(..); //in PressureTransferPolicy.hpp \n";//Razvan
     }
 
     virtual void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
+std::cout << "####in : PressureTransferPolicy::moveToFineLevel(..); //in PressureTransferPolicy.hpp \n";//Razvan
         auto end = fine.end(), begin = fine.begin();
 
         for (auto block = begin; block != end; ++block) {
@@ -157,6 +162,7 @@ public:
                 (*block)[pressure_var_index_] = this->lhs_[block - begin];
             }
         }
+std::cout << "####out: PressureTransferPolicy::moveToFineLevel(..); //in PressureTransferPolicy.hpp \n";//Razvan
     }
 
     virtual PressureTransferPolicy* clone() const override

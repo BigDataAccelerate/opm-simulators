@@ -43,6 +43,7 @@ namespace Amg
         explicit PressureSolverPolicy(const Opm::PropertyTree& prm)
             : prm_(prm)
         {
+std::cout << " in PressureSolverPolicy.hpp :: CONSTRUCTOR\n";//Razvan
         }
 
     private:
@@ -78,8 +79,10 @@ namespace Amg
                 assert(op.category() != Dune::SolverCategory::overlapping);
                 // Assuming that we do not use Cpr as Pressure solver and use hard
                 // coded pressure index that might be wrong but should be unused.
+std::cout << " in PressureInverseOperator --> before: linsolver_ = std::make_unique<Solver>(op, prm, std::function<X()>()\n";//Razvan
                 linsolver_ = std::make_unique<Solver>(op, prm, std::function<X()>(),
                                                       /* pressureIndex = */ 1);
+std::cout << " in PressureInverseOperator --> after: linsolver_ = std::make_unique<Solver>(op, prm, std::function<X()>()\n";//Razvan
             }
 
 

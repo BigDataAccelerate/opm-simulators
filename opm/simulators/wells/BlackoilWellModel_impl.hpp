@@ -1558,9 +1558,14 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
     BlackoilWellModel<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+        int i=1;
+std::cout <<"----in : BlackoilWellModel::apply(..); // in OPM -> wells/BlackoilWellModel_impl.hpp\n";
         for (auto& well : well_container_) {
+std::cout <<"----before: well->apply(x, Ax); --- well " << i << " / " << well_container_.size() << "\n"; 
             well->apply(x, Ax);
+std::cout <<"----after : well->apply(x, Ax); --- well " << i++ << " / " << well_container_.size() << "\n";
         }
+std::cout <<"----out: BlackoilWellModel::apply(..); // in OPM -> wells/BlackoilWellModel_impl.hpp\n";
     }
 
     template<typename TypeTag>
@@ -1606,7 +1611,9 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
     BlackoilWellModel<TypeTag>::
     applyScaleAdd(const Scalar alpha, const BVector& x, BVector& Ax) const
     {
+std::cout <<"--in : BlackoilWellModel::applyScaleAdd(..); // in OPM -> wells/BlackoilWellModel_impl.hpp\n";
         if (this->well_container_.empty()) {
+std::cout <<"--out: BlackoilWellModel::applyScaleAdd(..); // in OPM -> wells/BlackoilWellModel_impl.hpp\n";
             return;
         }
 
@@ -1615,10 +1622,15 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
         }
 
         scaleAddRes_ = 0.0;
+std::cout <<"--before: apply( x, scaleAddRes_ );\n";
         // scaleAddRes_  = - C D^-1 B x
         apply( x, scaleAddRes_ );
+std::cout <<"--after: apply( x, scaleAddRes_ ); \n";
+std::cout <<"--before: Ax.axpy( alpha, scaleAddRes_ );\n";
         // Ax = Ax + alpha * scaleAddRes_
         Ax.axpy( alpha, scaleAddRes_ );
+std::cout <<"--after: Ax.axpy( alpha, scaleAddRes_ );\n";
+std::cout <<"--out: BlackoilWellModel::applyScaleAdd(..); // in OPM -> wells/BlackoilWellModel_impl.hpp\n";
     }
 
     template<typename TypeTag>

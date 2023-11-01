@@ -34,6 +34,7 @@
 #include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 
+#include<opm/simulators/linalg/WriteSystemMatrixHelper.hpp>
 
 namespace Opm
 {
@@ -42,6 +43,10 @@ namespace Accelerator
 
 using Opm::OpmLog;
 using Dune::Timer;
+
+// void get_clBuffer(cl::Buffer v, double *x) {
+//     queue->enqueueReadBuffer(v, CL_TRUE, 0, sizeof(double) * N, x);
+// }
 
 template <unsigned int block_size>
 CPR<block_size>::CPR(int verbosity_, bool opencl_ilu_parallel_) :
@@ -449,6 +454,7 @@ void CPR<block_size>::analyzeAggregateMaps() {
 
 template <unsigned int block_size>
 void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x) {
+std::cout << "-------in : amg_cycle_gpu(..) --> for level " << level+1 << "/" << num_levels << " // from CPR.cpp\n";//Razvan
     OpenclMatrix *A = &d_Amatrices[level];
     OpenclMatrix *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
@@ -465,7 +471,11 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
             OPM_THROW(std::logic_error, "CPR OpenCL enqueueReadBuffer error");
         }
-
+        
+// for(int i=0; i<10; i++) 
+//      std::cout << h_y[i] << std::endl; //Debug print vector from opencl
+// exit(0);
+std::cout << "######## calling umfpack.apply(h_x.data(), h_y.data()); for coarsest level // from CPR.cpp\n";//Razvan
         // solve coarsest level using umfpack
         umfpack.apply(h_x.data(), h_y.data());
 
@@ -488,27 +498,38 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
     // presmooth
     double jacobi_damping = 0.65; // default value in amgcl: 0.72
     for (unsigned i = 0; i < num_pre_smooth_steps; ++i){
+std::cout << "######## calling OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);\n";//Razvan
+std::cout << "######## calling penclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);\n";//Razvan
         OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
         OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
     }
 
+std::cout << "######## calling OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);\n";//Razvan
+std::cout << "######## calling OpenclKernels::spmv(R->nnzValues, R->colIndices, R->rowPointers, t, f, Nnext, 1, true);\n";//Razvan
     // move to coarser level
     OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
     OpenclKernels::spmv(R->nnzValues, R->colIndices, R->rowPointers, t, f, Nnext, 1, true);
+    
     amg_cycle_gpu(level + 1, f, u);
+    
+std::cout << "######## calling OpenclKernels::prolongate_vector(u, x, d_PcolIndices[level], Ncur);\n";//Razvan
     OpenclKernels::prolongate_vector(u, x, d_PcolIndices[level], Ncur);
 
     // postsmooth
     for (unsigned i = 0; i < num_post_smooth_steps; ++i){
+std::cout << "######## calling OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);\n";//Razvan
+std::cout << "######## calling OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);\n";//Razvan
         OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
         OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
     }
+std::cout << "-------out: amg_cycle_gpu(..)--> for level " << level+1 << "/" << num_levels << "  // from CPR.cpp\n";//Razvan
 }
 
 
 // x = prec(y)
 template <unsigned int block_size>
 void CPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
+std::cout << "------in : apply_amg(..) // from CPR.cpp\n";//Razvan
     // 0-initialize u and x vectors
     events.resize(d_u.size() + 1);
     err = queue->enqueueFillBuffer(*d_coarse_x, 0, 0, sizeof(double) * Nb, nullptr, &events[0]);
@@ -522,18 +543,29 @@ void CPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
         OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
     }
 
+std::cout << "####### calling: residual(d_mat->nnzValues, d_mat->colIndices, d_mat->rowPointers, x, y, *d_rs, Nb, block_size); // from CPR.cpp\n";//Razvan
     OpenclKernels::residual(d_mat->nnzValues, d_mat->colIndices, d_mat->rowPointers, x, y, *d_rs, Nb, block_size);
+
+std::cout << "####### calling: OpenclKernels::full_to_pressure_restriction(*d_rs, *d_weights, *d_coarse_y, Nb); // from CPR.cpp\n";//Razvan
     OpenclKernels::full_to_pressure_restriction(*d_rs, *d_weights, *d_coarse_y, Nb);
 
+//TODO: find a way to read this vector out     Vector& rs;
+// get_result(rs);
+
+std::cout << "------before: amg_cycle_gpu(0, *d_coarse_y, *d_coarse_x); // from CPR.cpp\n";//Razvan
     amg_cycle_gpu(0, *d_coarse_y, *d_coarse_x);
+std::cout << "------after : amg_cycle_gpu(0, *d_coarse_y, *d_coarse_x); // from CPR.cpp\n";//Razvan
 
     OpenclKernels::add_coarse_pressure_correction(*d_coarse_x, x, pressure_idx, Nb);
+std::cout << "------out: apply_amg(..) // from CPR.cpp\n";//Razvan
 }
 
 template <unsigned int block_size>
 void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
+std::cout << "-----before: bilu0->apply(y, x); // from CPR.cpp\n";//Razvan
     Dune::Timer t_bilu0;
     bilu0->apply(y, x);
+std::cout << "-----after : bilu0->apply(y, x); // from CPR.cpp\n";//Razvan
     if (verbosity >= 4) {
         std::ostringstream out;
         out << "CPR apply bilu0(): " << t_bilu0.stop() << " s";
@@ -541,7 +573,9 @@ void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
     }
 
     Dune::Timer t_amg;
+std::cout << "-----before: apply_amg(y, x); // from CPR.cpp\n";//Razvan
     apply_amg(y, x);
+std::cout << "-----after : apply_amg(y, x); // from CPR.cpp\n";//Razvan
     if (verbosity >= 4) {
         std::ostringstream out;
         out << "CPR apply amg(): " << t_amg.stop() << " s";

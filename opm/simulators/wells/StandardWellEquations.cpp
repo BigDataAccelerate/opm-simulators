@@ -129,20 +129,29 @@ void StandardWellEquations<Scalar,numEq>::clear()
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::apply(const BVector& x, BVector& Ax) const
 {
+std::cout <<"-----in : StandardWellEquations::apply(..); // in OPM -> StandardWellEquations.cpp\n";
+
     assert(Bx_.size() == duneB_.N());
     assert(invDrw_.size() == invDuneD_.N());
 
+std::cout <<"-----before: parallelB_.mv(x, Bx_);\n";
     // Bx_ = duneB_ * x
     parallelB_.mv(x, Bx_);
+std::cout <<"-----after : parallelB_.mv(x, Bx_);\n";
 
+std::cout <<"-----before: invDuneD_.mv(Bx_, invDBx);\n";
     // invDBx = invDuneD_ * Bx_
     // TODO: with this, we modified the content of the invDrw_.
     // Is it necessary to do this to save some memory?
     auto& invDBx = invDrw_;
     invDuneD_.mv(Bx_, invDBx);
+std::cout <<"-----after : invDuneD_.mv(Bx_, invDBx);\n";
 
+std::cout <<"-----before: duneC_.mmtv(invDBx, Ax);\n";
     // Ax = Ax - duneC_^T * invDBx
     duneC_.mmtv(invDBx, Ax);
+std::cout <<"-----after : duneC_.mmtv(invDBx, Ax);\n";
+std::cout <<"-----out: StandardWellEquations::apply(..); // in OPM -> StandardWellEquations.cpp\n";
 }
 
 template<class Scalar, int numEq>

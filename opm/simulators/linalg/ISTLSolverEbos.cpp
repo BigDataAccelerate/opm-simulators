@@ -91,6 +91,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
                                                     [[maybe_unused]] Comm& comm)
 
 {
+// std::cout << " in ISTLSolverEbos.cpp -> FlexibleSolverInfo<Matrix,Vector,Comm>::create \n";//Razvan
     // Write sizes of linear systems on all ranks to debug log.
     if (!forceSerial) {
 #if HAVE_MPI
@@ -117,7 +118,9 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
 
     if (parallel) {
 #if HAVE_MPI
+std::cout << "                  ----> we are in 'parallel' branch\n";//Razvan
         if (!wellOperator_) {
+std::cout << "                        no wellOperator_ path\n";//Razvan
             using ParOperatorType = Dune::OverlappingSchwarzOperator<Matrix, Vector, Vector, Comm>;
             auto pop = std::make_unique<ParOperatorType>(matrix, comm);
             using FlexibleSolverType = Dune::FlexibleSolver<ParOperatorType>;
@@ -128,6 +131,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
             this->op_ = std::move(pop);
             this->solver_ = std::move(sol);
         } else {
+std::cout << "                        yes wellOperator_ path\n";//Razvan
             using ParOperatorType = WellModelGhostLastMatrixAdapter<Matrix, Vector, Vector, true>;
             auto pop = std::make_unique<ParOperatorType>(matrix, *wellOperator_,
                                                          interiorCellNum_);
@@ -141,7 +145,9 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
         }
 #endif
     } else {
+std::cout << "                  ----> we are in 'serial' branch\n";//Razvan
         if (!wellOperator_) {
+std::cout << "                        no wellOperator_ path\n";//Razvan
             using SeqOperatorType = Dune::MatrixAdapter<Matrix, Vector, Vector>;
             auto sop = std::make_unique<SeqOperatorType>(matrix);
             using FlexibleSolverType = Dune::FlexibleSolver<SeqOperatorType>;
@@ -152,15 +158,20 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
             this->op_ = std::move(sop);
             this->solver_ = std::move(sol);
         } else {
+std::cout << "                        yes wellOperator_ path >>>>>> BEGIN\n";//Razvan
             using SeqOperatorType = WellModelMatrixAdapter<Matrix, Vector, Vector, false>;
+std::cout << "                      before auto sop = std::make_unique<SeqOperatorType>(matrix, *wellOperator_);\n";
             auto sop = std::make_unique<SeqOperatorType>(matrix, *wellOperator_);
             using FlexibleSolverType = Dune::FlexibleSolver<SeqOperatorType>;
+std::cout << "===================== BEFORE std::make_unique<FlexibleSolverType>(*sop, prm, weightsCalculator, pressureIndex); ======================= \n";
             auto sol = std::make_unique<FlexibleSolverType>(*sop, prm,
                                                             weightsCalculator,
                                                             pressureIndex);
+std::cout << "================= AFTER std::make_unique<FlexibleSolverType>(*sop, prm, weightsCalculator, pressureIndex);======================= \n";
             this->pre_ = &sol->preconditioner();
             this->op_ = std::move(sop);
             this->solver_ = std::move(sol);
+std::cout << "                        yes wellOperator_ path >>>>>> END\n";//exit(0);//Razvan
         }
     }
 }

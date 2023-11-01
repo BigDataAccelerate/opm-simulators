@@ -70,6 +70,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
                                                              [[maybe_unused]] std::string linsolver)
 : verbosity(linear_solver_verbosity), accelerator_mode(accelerator_mode_)
 {
+std::cout << "-in : BdaBridge :: CONSTRUCTOR( \"" << accelerator_mode_ << " - " << linsolver << " \")!!!!!!!!!!!!!!!!!!!!!!!; // from BDaBridge.cpp\n";//Razvan
     if (accelerator_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
         use_gpu = true;
@@ -112,9 +113,8 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
     } else {
         OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]");
     }
+std::cout << "-out: BdaBridge :: CONSTRUCTOR( \"" << accelerator_mode_ << " - " << linsolver << " \")!!!!!!!!!!!!!!!!!!!!!!!; // from BDaBridge.cpp\n";//Razvan
 }
-
-
 
 template <class BridgeMatrix>
 int replaceZeroDiagonal(BridgeMatrix& mat, std::vector<typename BridgeMatrix::size_type>& diag_indices) {
@@ -210,6 +210,8 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
                                                                      WellContributions& wellContribs,
                                                                      InverseOperatorResult& res)
 {
+std::cout << "--in : BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(..); // from BdaBridge.cpp\n";//Razvan
+
     if (use_gpu) {
         BdaResult result;
         result.converged = false;
@@ -265,13 +267,15 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
         tz_cum += tz;
         std::cout << "Checking zeros cum: " << tz_cum << "(+" << tz << ")\n";
 
+// std::cout << "--before: backend->solve_system(matrix, static_cast<double*>(&(b[0][0])), jacMatrix, wellContribs, result); // from BdaBridge.cpp\n";//Razvan
         /////////////////////////
         // actually solve
         // assume that underlying data (nonzeroes) from b (Dune::BlockVector) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
         Dune::Timer t_bridge;
         SolverStatus status = backend->solve_system(matrix, static_cast<double*>(&(b[0][0])), jacMatrix, wellContribs, result);
         std::cout << " call to backend->solve_system took : " << t_bridge.stop() << "\n";
-        
+// std::cout << "--after : backend->solve_system(matrix, static_cast<double*>(&(b[0][0])), jacMatrix, wellContribs, result); // from BdaBridge.cpp\n";//Razvan
+
         switch(status) {
         case SolverStatus::BDA_SOLVER_SUCCESS:
             //OpmLog::info("BdaSolver converged");
@@ -294,6 +298,7 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
     } else {
         res.converged = false;
     }
+std::cout << "--out: BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(..); // from BdaBridge.cpp\n";//Razvan
 }
 
 

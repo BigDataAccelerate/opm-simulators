@@ -50,6 +50,7 @@ template<class X, class Y>
 void ParallelStandardWellB<Scalar>::
 mv (const X& x, Y& y) const
 {
+std::cout <<"------in : ParallelStandardWellB::mv(x, y ); //in OPM -> WellHelpers.cpp\n"; 
 #if !defined(NDEBUG) && HAVE_MPI
     // We need to make sure that all ranks are actually computing
     // for the same well. Doing this by checking the name of the well.
@@ -86,7 +87,9 @@ mv (const X& x, Y& y) const
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 #endif
+std::cout <<"------before: B_.mv(x, y);\n";
     B_.mv(x, y);
+std::cout <<"------after : B_.mv(x, y);\n";
 
     if (this->parallel_well_info_.communication().size() > 1)
     {
@@ -100,6 +103,7 @@ mv (const X& x, Y& y) const
         this->parallel_well_info_.communication().template allreduce<std::plus<YField>>(y[0].container().data(),
                                                                                         y[0].container().size());
     }
+std::cout <<"------out: ParallelStandardWellB::mv(x, y ); //in OPM -> WellHelpers.cpp\n"; 
 }
 
 template<typename Scalar>

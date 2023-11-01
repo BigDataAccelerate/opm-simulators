@@ -51,8 +51,10 @@ namespace Dune
                    const std::function<VectorType()>& weightsCalculator,
                    std::size_t pressureIndex)
     {
+// std::cout << "\n\n @@@@---> in FlexibleSolver CONSTRUCTOR before calling init(...)\n";//Razvan
         init(op, Dune::Amg::SequentialInformation(), prm, weightsCalculator,
              pressureIndex);
+// std::cout << " @@@@---> in FlexibleSolver CONSTRUCTOR after calling init(...)\n";//Razvan
     }
 
     /// Create a parallel solver (if Comm is e.g. OwnerOverlapCommunication).
@@ -138,13 +140,16 @@ namespace Dune
                  const Dune::Amg::SequentialInformation&,
                  std::size_t pressureIndex)
     {
+// std::cout << "-----5 in FlexibleSolver_impl.hpp -> FlexibleSolver<Operator>::initOpPrecSp(prm,...)\n";//Razvan
         // Sequential case.
         linearoperator_for_solver_ = &op;
         auto child = prm.get_child_optional("preconditioner");
+// if(child) std::cout << "child exists:  " << child->get<std::string>("type", "ParOverILU0") << "----> calling PreconditionerFactory::create\n"; else std::cout << "child does not exists\n;";//Razvan
         preconditioner_ = Opm::PreconditionerFactory<Operator,Dune::Amg::SequentialInformation>::create(op,
                                                                        child ? *child : Opm::PropertyTree(),
                                                                        weightsCalculator,
                                                                        pressureIndex);
+// std::cout << "END -----5 in FlexibleSolver_impl.hpp -> FlexibleSolver<Operator>::initOpPrecSp(prm,...)\n";//Razvan
         scalarproduct_ = std::make_shared<Dune::SeqScalarProduct<VectorType>>();
     }
 
@@ -153,12 +158,14 @@ namespace Dune
     FlexibleSolver<Operator>::
     initSolver(const Opm::PropertyTree& prm, const bool is_iorank)
     {
+// std::cout << "------6 in FlexibleSolver_impl.hpp -> FlexibleSolver<Operator>::initSolver(prm,bool)\n";//Razvan
         const double tol = prm.get<double>("tol", 1e-2);
         const int maxiter = prm.get<int>("maxiter", 200);
         const int verbosity = is_iorank ? prm.get<int>("verbosity", 0) : 0;
         const std::string solver_type = prm.get<std::string>("solver", "bicgstab");
 // std::cout<<">>>>>>>>>>>>>>> Razvan message: Checking solver type = " << solver_type << std::endl; //Razvan
         if (solver_type == "bicgstab") {
+// std::cout << "      >>>> using bicgstabsolver \n";//exit(0);//Razvan
             linsolver_ = std::make_shared<Dune::BiCGSTABSolver<VectorType>>(*linearoperator_for_solver_,
                                                                             *scalarproduct_,
                                                                             *preconditioner_,
@@ -166,6 +173,7 @@ namespace Dune
                                                                             maxiter, // maximum number of iterations
                                                                             verbosity);
         } else if (solver_type == "loopsolver") {
+// std::cout << "      >>>> using loopsolver \n";//exit(0);//Razvan
             linsolver_ = std::make_shared<Dune::LoopSolver<VectorType>>(*linearoperator_for_solver_,
                                                                         *scalarproduct_,
                                                                         *preconditioner_,
@@ -173,6 +181,7 @@ namespace Dune
                                                                         maxiter, // maximum number of iterations
                                                                         verbosity);
         } else if (solver_type == "gmres") {
+// std::cout << "      >>>> using gmres \n";//exit(0);//Razvan
             int restart = prm.get<int>("restart", 15);
             linsolver_ = std::make_shared<Dune::RestartedGMResSolver<VectorType>>(*linearoperator_for_solver_,
                                                                                   *scalarproduct_,
@@ -182,6 +191,7 @@ namespace Dune
                                                                                   maxiter, // maximum number of iterations
                                                                                   verbosity);
         } else if (solver_type == "flexgmres") {
+// std::cout << "      >>>> using flexgmres \n";//exit(0);//Razvan
             int restart = prm.get<int>("restart", 15);
             linsolver_ = std::make_shared<Dune::RestartedFlexibleGMResSolver<VectorType>>(*linearoperator_for_solver_,
                                                                                           *scalarproduct_,
@@ -192,12 +202,14 @@ namespace Dune
                                                                                           verbosity);
 #if HAVE_SUITESPARSE_UMFPACK
         } else if (solver_type == "umfpack") {
+// std::cout << "      >>>> using umfpack \n";//exit(0);//Razvan
             using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
             linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, false);
             direct_solver_ = true;
 #endif
 #if HAVE_CUDA
         } else if (solver_type == "cubicgstab") {
+// std::cout << "      >>>> using cubicgstab \n";//exit(0);//Razvan
             linsolver_.reset(new Opm::cuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
                 *linearoperator_for_solver_,
                 *scalarproduct_,
@@ -244,7 +256,9 @@ namespace Dune
          const std::function<VectorType()> weightsCalculator,
          std::size_t pressureIndex)
     {
+// std::cout << "----4a before initOpPrecSp     in FlexibleSolver_impl.hpp -> FlexibleSolver::init(..)\n";//Ravzvan
         initOpPrecSp(op, prm, weightsCalculator, comm, pressureIndex);
+// std::cout << "----4b before initSolver     in FlexibleSolver_impl.hpp -> FlexibleSolver::init(..)\n";//Ravzvan
         initSolver(prm, comm.communicator().rank() == 0);
     }
 

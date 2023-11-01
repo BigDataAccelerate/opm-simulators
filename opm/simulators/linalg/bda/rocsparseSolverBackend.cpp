@@ -154,7 +154,7 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
     double one  = 1.0;
     double mone = -1.0;
 
-    Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
+    Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false), t_onesolve(false);
 
     // set stream here, the WellContributions object is destroyed every linear solve
     // the number of wells can change every linear solve
@@ -213,6 +213,7 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
             HIP_CHECK(hipStreamSynchronize(stream));
             t_rest.stop();
             t_prec.start();
+            t_onesolve.start();
         }
 
         // apply ilu0
@@ -225,6 +226,11 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_prec.stop();
+            t_onesolve.stop();
+            std::ostringstream out;
+            out << "--------rocsparseSolver::lower triangular solve:  " << t_onesolve.elapsed() << " s";
+            t_onesolve.reset();
+            OpmLog::info(out.str());
             t_spmv.start();
         }
 

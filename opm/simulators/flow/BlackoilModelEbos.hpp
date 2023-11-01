@@ -434,6 +434,7 @@ static int itercount=0;//Razvan
 
                 // Compute the nonlinear update.
                 unsigned nc = ebosSimulator_.model().numGridDof();
+
                 BVector x(nc);
 
                 // Solve the linear system.
@@ -449,11 +450,29 @@ static int itercount=0;//Razvan
                     std::cout << "BlackoilModelEbos::nonlinearIteration cum well time: " << t_wells << "\n";
 // std::cout<<"exit after wellModel().linearize in BlackoilModelEbos\n";exit(0);
 
+std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);//Razvan 
+std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);//Razvan
+int dumpVector = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
+
+std::cout << " ######################## BEFORE solveJacobianSystem(x) ###################\n";//Razvan
+// std::cout << "nc = " << nc << std::endl; ==> this prints 44431
+// std::cout << "numEq = " << numEq << std::endl; ==> this prints 3
+
+if(dumpVector == 20){
+Dune::storeMatrixMarket(x, "x_"+accelerator_mode+"_"+linsolver+"_init_"+std::to_string(itercount)+".mm");//Razvan
+}
                     t3.start();
                     solveJacobianSystem(x); 
                     t_solve += t3.stop();
                     std::cout << "BlackoilModelEbos::nonlinearIteration cum solve time: " << t_solve << "\n";
                     std::cout << "BlackoilModelEbos::report.linear_solve_time 1: " << report.linear_solve_time << "\n";
+
+if(dumpVector == 20){
+Dune::storeMatrixMarket(x, "x_"+accelerator_mode+"_"+linsolver+"_solved_"+std::to_string(itercount)+".mm");
+}
+
+std::cout << " ######################## AFTER solveJacobianSystem(x) ###################\n";
+
                     report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
                     std::cout << "BlackoilModelEbos::report.linear_solve_time 2: " << report.linear_solve_time << "\n";
@@ -477,7 +496,7 @@ static int itercount=0;//Razvan
                 perfTimer.reset();
                 perfTimer.start();
 itercount++;//Razvan
-if(itercount == 1){std::cout<<"exit after solveJacobianSystem(x) in BlackoilModelEbos\n"; exit(0);}//Razvan
+if(itercount == 2){std::cout<<"exit after solveJacobianSystem(x) in BlackoilModelEbos\n"; exit(0);}//Razvan
 
                 // handling well state update before oscillation treatment is a decision based
                 // on observation to avoid some big performance degeneration under some circumstances.
@@ -707,8 +726,8 @@ if(itercount == 1){std::cout<<"exit after solveJacobianSystem(x) in BlackoilMode
                 // consistent, this is not relevant for OPM-flow...
                 ebosSolver.solve(x);
                 t_total = perfTimer.stop();
-                std::cout << "BlackoilModelEbos::solveJacobianSystem cum prepare time: " << t_prepare << "\n";
-                std::cout << "BlackoilModelEbos::solveJacobianSystem cum solve time: " << t_total << "\n";
+                std::cout << "-BlackoilModelEbos::solveJacobianSystem cum prepare time: " << t_prepare << "\n";
+                std::cout << "-BlackoilModelEbos::solveJacobianSystem cum solve time: " << t_total << "\n";
             }
        }
 
