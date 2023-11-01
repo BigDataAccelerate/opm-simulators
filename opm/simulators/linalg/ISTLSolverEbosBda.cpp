@@ -95,6 +95,7 @@ apply(Vector& rhs,
       Vector& x,
       Dune::InverseOperatorResult& result)
 {
+// std::cout << "-in : ISTLSolverEbosBda :: apply(..); // from ISTLBridge.cpp\n";//Razvan
     bool use_gpu = bridge_->getUseGpu();
     if (use_gpu) {
         Dune::Timer t5;
@@ -111,6 +112,7 @@ apply(Vector& rhs,
         t_wells += t5.stop();
         std::cout << "BdaSolverInfo::apply cum wells time: " << t_wells << "(+" << t5.elapsed() << ")\n";
 
+std::cout << "-before: BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(..); // from BdaBridge.cpp\n";//Razvan
         if (numJacobiBlocks_ > 1) {
             Dune::Timer t;
             static double t_total = 0.0;
@@ -134,9 +136,13 @@ apply(Vector& rhs,
             t_solve += t.stop();
             std::cout << "BdaSolverInfo::apply cum solve_system time: " << t_solve << "(+" << t.elapsed() << ")\n";
         }
+std::cout << "-after : BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(..); // from BdaBridge.cpp\n";//Razvan
         if (result.converged) {
             // get result vector x from non-Dune backend, iff solve was successful
+// Dune::storeMatrixMarket(x, "x_initial.mm");//TODO: figure out a way to get vectors from the GPU
             bridge_->get_result(x);
+// Dune::storeMatrixMarket(x, "x_solved.mm");
+std::cout << "-out: ISTLSolverEbosBda :: apply(..); // from ISTLBridge.cpp\n";//Razvan
             return true;
         } else {
             // warn about CPU fallback
@@ -148,7 +154,7 @@ apply(Vector& rhs,
             }
         }
     }
-
+std::cout << "-out: ISTLSolverEbosBda :: apply(..); // from ISTLBridge.cpp\n";//Razvan
     return false;
 }
 

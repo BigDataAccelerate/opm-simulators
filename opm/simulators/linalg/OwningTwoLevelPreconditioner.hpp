@@ -101,8 +101,9 @@ public:
                            coarseSolverPolicy_,
                            prm.get<int>("pre_smooth", 0),
                            prm.get<int>("post_smooth", 1))
-        , prm_(prm)
+        , prm_(prm)  
     {
+std::cout << "1) in OwningTwoLevelPreconditioner.hpp --> OwningTwoLevelPreconditioner :: CONSTRUCTOR - line 106\n"; //exit(0);//Razvan
         if (prm.get<int>("verbosity", 0) > 10) {
             std::string filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
             std::ofstream outfile(filename);
@@ -136,6 +137,7 @@ public:
                            prm.get<int>("post_smooth", 1))
         , prm_(prm)
     {
+std::cout << "2) in OwningTwoLevelPreconditioner.hpp --> OwningTwoLevelPreconditioner :: CONSTRUCTOR - line 140\n"; //exit(0);//Razvan
         if (prm.get<int>("verbosity", 0) > 10 && comm.communicator().rank() == 0) {
             auto filename = prm.get<std::string>("weights_filename", "impes_weights.txt");
             std::ofstream outfile(filename);
@@ -154,7 +156,9 @@ public:
 
     virtual void apply(VectorType& v, const VectorType& d) override
     {
+std::cout << "--before: twolevel_method_.apply(v, d); //in OwningTwoLevelPreconditioner.hpp::apply \n";//Razvan
         twolevel_method_.apply(v, d);
+std::cout << "--after: twolevel_method_.apply(v, d); //in OwningTwoLevelPreconditioner.hpp::apply \n";//Razvan
     }
 
     virtual void post(VectorType& x) override

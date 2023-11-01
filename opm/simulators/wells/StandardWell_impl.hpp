@@ -1294,7 +1294,7 @@ namespace Opm
     StandardWell<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
-// std::cout << "---in : StandardWell<TypeTag>::apply(..) (addWells = FALSE) //from StandardWell_impl.hpp\n";//Razvan
+// std::cout <<"----in : StandardWell::apply(..); // in OPM -> StandardWell_impl.hpp\n";
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 // std::cout << "this->param_.matrix_add_well_contributions_ = " << this->param_.matrix_add_well_contributions_ << std::endl;//Razvan
         if (this->param_.matrix_add_well_contributions_)
@@ -1304,8 +1304,10 @@ namespace Opm
             return;
         }
 
+// std::cout <<"----before: this->linSys_.apply(x, Ax);\n";
         this->linSys_.apply(x, Ax);
-// std::cout << "---out: StandardWell<TypeTag>::apply(..) //from StandardWell_impl.hpp\n";//Razvan
+// std::cout <<"----after : this->linSys_.apply(x, Ax);\n";
+// std::cout <<"----out: StandardWell::apply(..); // in OPM -> StandardWell_impl.hpp\n";
     }
 
 
