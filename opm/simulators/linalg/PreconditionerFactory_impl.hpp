@@ -146,6 +146,7 @@ struct StandardPreconditioners
 {
     static void add()
     {
+// std::cout << " in StandardPreconditioners :: add() \n";//Razvan
         using namespace Dune;
         using O = Operator;
         using C = Comm;
@@ -224,6 +225,7 @@ struct StandardPreconditioners
             OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
           }
           using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, false>;
+// std::cout << " in create CPR preconditioner using OwningTwoLevelPreconditioner\n";//Razvan
           return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
         });
         F::addCreator("cprt", [](const O& op, const P& prm, const std::function<V()> weightsCalculator, std::size_t pressureIndex, const C& comm) {
@@ -233,6 +235,7 @@ struct StandardPreconditioners
             OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
           }
           using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, true>;
+// std::cout << " in create CPRT preconditioner using OwningTwoLevelPreconditioner\n";//Razvan
           return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
         });
 
@@ -244,6 +247,7 @@ struct StandardPreconditioners
               OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
             }
             using LevelTransferPolicy = Opm::PressureBhpTransferPolicy<O, Comm, false>;
+// std::cout << " in create CPRW preconditioner using OwningTwoLevelPreconditioner\n";//Razvan
             return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
           });
         }
@@ -324,6 +328,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
 {
     static void add()
     {
+// std::cout << "                             in StandardPreconditioners<Operator,Dune::Amg::SequentialInformation> :: add() \n";//Razvan
         using namespace Dune;
         using O = Operator;
         using C = Dune::Amg::SequentialInformation;
@@ -339,6 +344,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             const int n = prm.get<int>("ilulevel", 0);
+// std::cout << " ==> create ParOverILU0 preconditioner \n";//Razvan
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
@@ -440,6 +446,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
                 using LevelTransferPolicy = Opm::PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+// std::cout << " ==> create CPRW preconditioner using OwningTwoLevelPreconditioner\n";//Razvan
                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
             });
             }
@@ -450,6 +457,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                                 }
                                 using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+// std::cout << " ==> create CPR preconditioner using OwningTwoLevelPreconditioner\n";//Razvan
                                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
         });
         F::addCreator("cprt", [](const O& op, const P& prm, const std::function<V()>& weightsCalculator, std::size_t pressureIndex) {
@@ -458,7 +466,14 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                                 }
                                 using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, true>;
-                                return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
+// std::cout << " ==> create CPRT preconditioner using OwningTwoLevelPreconditioner\n";//Razvan
+/*        std::ostringstream msg;
+        msg << "Preconditioner type " << type << " is not registered in the factory. Available types are: ";
+        for (const auto& prec : creators_) {
+            msg << prec.first << ' ';
+        }
+        msg << std::endl;
+        OPM_THROW(std::invalid_argument, msg.str());                               */return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(op, prm, weightsCalculator, pressureIndex);
         });
 
 #if HAVE_CUDA
@@ -504,6 +519,7 @@ template <class Operator, class Comm>
 PreconditionerFactory<Operator,Comm>&
 PreconditionerFactory<Operator,Comm>::instance()
 {
+// std::cout << "       in PreconditionerFactory :: instance()\n";//Razvan
     static PreconditionerFactory singleton;
     return singleton;
 }
@@ -515,10 +531,13 @@ doCreate(const Operator& op, const PropertyTree& prm,
          const std::function<Vector()> weightsCalculator,
          std::size_t pressureIndex)
 {
+// std::cout << "          in PreconditionerFactory :: doCreate   before returning it->second(...4..)\n";//Razvan
     if (!defAdded_) {
       StandardPreconditioners<Operator,Comm>::add();
       defAdded_ = true;
     }
+    
+// std::cout << "-------- after create preconditioners! --------------\n";//Razvan
     const std::string& type = prm.get<std::string>("type", "ParOverILU0");
     auto it = creators_.find(type);
     if (it == creators_.end()) {
@@ -530,6 +549,7 @@ doCreate(const Operator& op, const PropertyTree& prm,
         msg << std::endl;
         OPM_THROW(std::invalid_argument, msg.str());
     }
+// std::cout << "B) in PreconditionerFactory :: doCreate   before returning it->second(...4..) of type " << type << std::endl;//Razvan
     return it->second(op, prm, weightsCalculator, pressureIndex);
 }
 
@@ -545,7 +565,7 @@ doCreate(const Operator& op, const PropertyTree& prm,
         defAdded_ = true;
     }
     const std::string& type = prm.get<std::string>("type", "ParOverILU0");
-    auto it = parallel_creators_.find(type);
+    auto it = parallel_creators_.find(type); //Razvan import to understand = std::map<std::string, ParCreator> parallel_creators_; where ParCreator = std::function<PrecPtr(const Operator&, const PropertyTree&, ...
     if (it == parallel_creators_.end()) {
         std::ostringstream msg;
         msg << "Parallel preconditioner type " << type
@@ -556,6 +576,7 @@ doCreate(const Operator& op, const PropertyTree& prm,
         msg << std::endl;
         OPM_THROW(std::invalid_argument, msg.str());
     }
+// std::cout << "          in PreconditionerFactory :: doCreate   before returning it->second(..5..)\n";//Razvan
     return it->second(op, prm, weightsCalculator, pressureIndex, comm);
 }
 
@@ -563,6 +584,7 @@ template <class Operator, class Comm>
 void PreconditionerFactory<Operator,Comm>::
 doAddCreator(const std::string& type, Creator c)
 {
+// std::cout <<"        in PreconditionerFactory :: doAddCreator (..Creator.)\n";//Razvan
     creators_[type] = c;
 }
 
@@ -570,6 +592,7 @@ template <class Operator, class Comm>
 void PreconditionerFactory<Operator,Comm>::
 doAddCreator(const std::string& type, ParCreator c)
 {
+// std::cout <<"        in PreconditionerFactory :: doAddCreator (..ParCreator.)\n";//Razvan
     parallel_creators_[type] = c;
 }
 
@@ -580,6 +603,7 @@ create(const Operator& op, const PropertyTree& prm,
        const std::function<Vector()>& weightsCalculator,
        std::size_t pressureIndex)
 {
+// std::cout <<"A) in PreconditionerFactory :: create(..4..)\n";//Razvan
     return instance().doCreate(op, prm, weightsCalculator, pressureIndex);
 }
 
@@ -590,6 +614,7 @@ create(const Operator& op, const PropertyTree& prm,
        const std::function<Vector()>& weightsCalculator, const Comm& comm,
        std::size_t pressureIndex)
 {
+// std::cout <<"A) in PreconditionerFactory :: create(..5..)\n";//Razvan
     return instance().doCreate(op, prm, weightsCalculator, pressureIndex, comm);
 }
 
@@ -600,6 +625,7 @@ PreconditionerFactory<Operator,Comm>::
 create(const Operator& op, const PropertyTree& prm, const Comm& comm,
        std::size_t pressureIndex)
 {
+// std::cout <<"A) in PreconditionerFactory :: create(..5f..)\n";//Razvan
     return instance().doCreate(op, prm, std::function<Vector()>(), pressureIndex, comm);
 }
 
@@ -607,6 +633,7 @@ template <class Operator, class Comm>
 void PreconditionerFactory<Operator,Comm>::
 addCreator(const std::string& type, Creator creator)
 {
+// std::cout <<"    in PreconditionerFactory :: addCreator (..Creator.)\n";//Razvan
     instance().doAddCreator(type, creator);
 }
 
@@ -614,6 +641,7 @@ template <class Operator, class Comm>
 void PreconditionerFactory<Operator,Comm>::
 addCreator(const std::string& type, ParCreator creator)
 {
+// std::cout <<"    in PreconditionerFactory :: addCreator (..ParCreator.)\n";//Razvan
     instance().doAddCreator(type, creator);
 }
 

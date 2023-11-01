@@ -407,7 +407,7 @@ void OpenclKernels::ILU_apply1(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buf
     if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels ILU_apply1() time: " << t_ilu_apply1.stop() << " s";
+        oss << std::scientific << "--------OpenclKernels::ILU_apply1() lower triangular solve time: " << t_ilu_apply1.stop() << " s";
         OpmLog::info(oss.str());
     }
 }

@@ -210,6 +210,7 @@ ParallelOverlappingILU0(const Matrix& A,
       A_(&reinterpret_cast<const Matrix&>(A)), iluIteration_(n),
       milu_(milu), redBlack_(redblack), reorderSphere_(reorder_sphere)
 {
+std::cout << " in ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>:: CONSTRUCTOR : line 213\n";//exit(0);//Razvan
     interiorSize_ = A.N();
     // BlockMatrix is a Subclass of FieldMatrix that just adds
     // methods. Therefore this cast should be safe.
@@ -230,6 +231,7 @@ ParallelOverlappingILU0(const Matrix& A,
       A_(&reinterpret_cast<const Matrix&>(A)), iluIteration_(n),
       milu_(milu), redBlack_(redblack), reorderSphere_(reorder_sphere)
 {
+std::cout << " in ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>:: CONSTRUCTOR : line 233\n";exit(0);//Razvan
     interiorSize_ = A.N();
     // BlockMatrix is a Subclass of FieldMatrix that just adds
     // methods. Therefore this cast should be safe.
@@ -242,7 +244,9 @@ ParallelOverlappingILU0(const Matrix& A,
                         const field_type w, MILU_VARIANT milu, bool redblack,
                         bool reorder_sphere)
     : ParallelOverlappingILU0( A, 0, w, milu, redblack, reorder_sphere )
-{}
+{
+// std::cout << " in ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>:: CONSTRUCTOR : line 247\n";exit(0);//Razvan
+}
 
 template<class Matrix, class Domain, class Range, class ParallelInfoT>
 ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>::
@@ -258,6 +262,7 @@ ParallelOverlappingILU0(const Matrix& A,
       A_(&reinterpret_cast<const Matrix&>(A)), iluIteration_(0),
       milu_(milu), redBlack_(redblack), reorderSphere_(reorder_sphere)
 {
+// std::cout << " in ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>:: CONSTRUCTOR : line 264\n";exit(0);//Razvan
     interiorSize_ = A.N();
     // BlockMatrix is a Subclass of FieldMatrix that just adds
     // methods. Therefore this cast should be safe.
@@ -280,6 +285,7 @@ ParallelOverlappingILU0(const Matrix& A,
       A_(&reinterpret_cast<const Matrix&>(A)), iluIteration_(0),
       milu_(milu), redBlack_(redblack), reorderSphere_(reorder_sphere)
 {
+// std::cout << " in ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>:: CONSTRUCTOR : line 286\n";exit(0);//Razvan
     // BlockMatrix is a Subclass of FieldMatrix that just adds
     // methods. Therefore this cast should be safe.
     update( );
@@ -289,7 +295,7 @@ template<class Matrix, class Domain, class Range, class ParallelInfoT>
 void ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>::
 apply (Domain& v, const Range& d)
 {
-// std::cout << "      IN ParallelOverlappingILU0::apply!!\n";//Razvan
+// std::cout << "#### Entering ParallelOverlappingILU0 : apply (only mmv calls in this, the rest is reorderings of values in a matrix\n";//exit(0);//Razvan
     OPM_TIMEBLOCK(apply);
     Range& md = reorderD(d);
     Domain& mv = reorderV(v);
@@ -346,6 +352,7 @@ apply (Domain& v, const Range& d)
         mv *= w_;
     }
     reorderBack(mv, v);
+// std::cout << "#### Exiting ParallelOverlappingILU0 : apply \n";//exit(0);//Razvan
 }
 
 template<class Matrix, class Domain, class Range, class ParallelInfoT>

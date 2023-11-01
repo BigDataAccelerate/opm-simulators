@@ -205,6 +205,7 @@ namespace Opm
 
     virtual void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
+std::cout << "\n####in : PressureBhpTransferPolicy::moveToCoarseLevel(..); //in PressureBhpTransferPolicy.hpp \n";//Razvan
         OPM_TIMEBLOCK(moveToCoarseLevel);
         //NB we iterate over fine assumming welldofs is at the end
         // Set coarse vector to zero
@@ -226,10 +227,12 @@ namespace Opm
         }
 
         this->lhs_ = 0;
+std::cout << "\n####out: PressureBhpTransferPolicy::moveToCoarseLevel(..); //in PressureBhpTransferPolicy.hpp \n";//Razvan
     }
 
     virtual void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
+std::cout << "\n####in : PressureBhpTransferPolicy::moveToFineLevel(..); //in PressureBhpTransferPolicy.hpp \n";//Razvan
         OPM_TIMEBLOCK(moveToFineLevel);
         //NB we iterate over fine assumming welldofs is at the end
         auto end = fine.end(), begin = fine.begin();
@@ -244,6 +247,7 @@ namespace Opm
                 (*block)[pressure_var_index_] = this->lhs_[block - begin];
             }
         }
+std::cout << "\n####out: PressureBhpTransferPolicy::moveToFineLevel(..); //in PressureBhpTransferPolicy.hpp \n";//Razvan
     }
 
     virtual PressureBhpTransferPolicy* clone() const override

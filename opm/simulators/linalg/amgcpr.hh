@@ -421,6 +421,7 @@ namespace Dune
         category_(SolverCategory::category(*smoothers_->coarsest())),
         verbosity_(parms.debugLevel())
     {
+std::cout << "in AMGCPR<M,X,S,PI,A>:: CONSTRUCTOR 1\n";//Razvan
       assert(matrices_->isBuilt());
 
       // build the necessary smoother hierarchies
@@ -443,6 +444,7 @@ namespace Dune
         category_(SolverCategory::category(pinfo)),
         verbosity_(criterion.debugLevel())
     {
+std::cout << "in AMGCPR<M,X,S,PI,A>:: CONSTRUCTOR 1\n";//Razvan
       if(SolverCategory::category(matrix) != SolverCategory::category(pinfo))
         DUNE_THROW(InvalidSolverCategory, "Matrix and Communication must have the same SolverCategory!");
       createHierarchies(criterion, const_cast<Operator&>(matrix), pinfo);
@@ -613,6 +615,7 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::pre(Domain& x, Range& b)
     {
+// std::cout<<"#####in : AMGCPR<M,X,S,PI,A>::pre //opm::amgcpr.hh \n";//Razvan
       OPM_TIMEBLOCK(pre);
       // Detect Matrix rows where all offdiagonal entries are
       // zero and set x such that  A_dd*x_d=b_d
@@ -690,8 +693,9 @@ namespace Dune
       // copy the changes to the original vectors.
       x = *lhs_->finest();
       b = *rhs_->finest();
-
+// std::cout<<"#####out: AMGCPR<M,X,S,PI,A>::pre //opm::amgcpr.hh \n";//Razvan
     }
+    
     template<class M, class X, class S, class PI, class A>
     std::size_t AMGCPR<M,X,S,PI,A>::levels()
     {
@@ -707,36 +711,43 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::apply(Domain& v, const Range& d)
     {
+// std::cout << "-----in : AMGCPR<M,X,S,PI,A>::apply //opm::amgcpr.hh\n";//Razvan
       OPM_TIMEBLOCK(apply);
       LevelContext levelContext;
 
       if(additive) {
         *(rhs_->finest())=d;
+// std::cout << "-----before: AMGCPR<M,X,S,PI,A>::additiveMgc //opm::amgcpr.hh\n";//Razvan
         additiveMgc();
+// std::cout << "-----after : AMGCPR<M,X,S,PI,A>::additiveMgc //opm::amgcpr.hh\n";//Razvan
         v=*lhs_->finest();
       }else{
         // Init all iterators for the current level
+// std::cout << "-----before: AMGCPR<M,X,S,PI,A>::initIteratorsWithFineLevel //opm::amgcpr.hh\n";//Razvan
         initIteratorsWithFineLevel(levelContext);
-
+// std::cout << "-----after : AMGCPR<M,X,S,PI,A>::initIteratorsWithFineLevel //opm::amgcpr.hh\n";//Razvan
 
         *levelContext.lhs = v;
         *levelContext.rhs = d;
         *levelContext.update=0;
         levelContext.level=0;
 
+// std::cout << "-----before: AMGCPR<M,X,S,PI,A>::mgc //opm::amgcpr.hh\n";//Razvan
         mgc(levelContext);
+// std::cout << "-----after : AMGCPR<M,X,S,PI,A>::mgc //opm::amgcpr.hh\n";//Razvan
 
         if(postSteps_==0||matrices_->maxlevels()==1)
           levelContext.pinfo->copyOwnerToAll(*levelContext.update, *levelContext.update);
 
         v=*levelContext.update;
       }
-
+// std::cout << "-----out: AMGCPR<M,X,S,PI,A>::apply //opm::amgcpr.hh\n";//Razvan
     }
 
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::initIteratorsWithFineLevel(LevelContext& levelContext)
     {
+// std::cout << "######in : AMGCPR<M,X,S,PI,A>::initIteratorsWithFineLevel //opm::amgcpr.hh\n";//Razvan
       OPM_TIMEBLOCK(initIteratorsWithFineLevel);
       levelContext.smoother = smoothers_->finest();
       levelContext.matrix = matrices_->matrices().finest();
@@ -747,12 +758,14 @@ namespace Dune
       levelContext.lhs = lhs_->finest();
       levelContext.update = update_->finest();
       levelContext.rhs = rhs_->finest();
+// std::cout << "######out: AMGCPR<M,X,S,PI,A>::initIteratorsWithFineLevel //opm::amgcpr.hh\n";//Razvan
     }
 
     template<class M, class X, class S, class PI, class A>
     bool AMGCPR<M,X,S,PI,A>
     ::moveToCoarseLevel(LevelContext& levelContext)
     {
+// std::cout << "----in : AMGCPR<M,X,S,PI,A>::moveToCoarseLevel(LevelContext& levelContext) <- amgcpr.hh\n";//Razvan
       OPM_TIMEBLOCK(moveToCoarseLevel);
       bool processNextLevel=true;
 
@@ -764,19 +777,23 @@ namespace Dune
           //restrict defect to coarse level right hand side.
           typename Hierarchy<Range,A>::Iterator fineRhs = levelContext.rhs++;
           ++levelContext.pinfo;
+// std::cout << "----before: Transfer<..>::restrictVector(..) <- amgcpr.hh (already setup & need to process next level)\n";//Razvan
           Transfer<typename OperatorHierarchy::AggregatesMap::AggregateDescriptor,Range,ParallelInformation>
           ::restrictVector(*(*levelContext.aggregates), *levelContext.rhs,
                            static_cast<const Range&>(fineRhs.getRedistributed()),
                            *levelContext.pinfo);
+// std::cout << "----after:  Transfer<..>::restrictVector(..) <- amgcpr.hh (already setup & need to process next level)\n";//Razvan
         }
       }else{
         //restrict defect to coarse level right hand side.
         typename Hierarchy<Range,A>::Iterator fineRhs = levelContext.rhs++;
         ++levelContext.pinfo;
+// std::cout << "----before: Transfer<..>::restrictVector(..) <- amgcpr.hh (not setup)\n";//Razvan
         Transfer<typename OperatorHierarchy::AggregatesMap::AggregateDescriptor,Range,ParallelInformation>
         ::restrictVector(*(*levelContext.aggregates),
                          *levelContext.rhs, static_cast<const Range&>(*fineRhs),
                          *levelContext.pinfo);
+// std::cout << "----after:  Transfer<..>::restrictVector(..) <- amgcpr.hh (not setup)\n";//Razvan
       }
 
       if(processNextLevel) {
@@ -795,6 +812,7 @@ namespace Dune
         // prepare the update on the next level
         *levelContext.update=0;
       }
+// std::cout << "----out: AMGCPR<M,X,S,PI,A>::moveToCoarseLevel(LevelContext& levelContext) <- amgcpr.hh\n";//Razvan
       return processNextLevel;
     }
 
@@ -851,6 +869,7 @@ namespace Dune
 
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::mgc(LevelContext& levelContext){
+// std::cout << "------in : AMGCPR<M,X,S,PI,A>::mgc(LevelContext& levelContext)\n";//Razvan
       //OPM_TIMEBLOCK(mgc);
       if(levelContext.matrix == matrices_->matrices().coarsest() && levels()==maxlevels()) {
         // Solve directly
@@ -862,21 +881,27 @@ namespace Dune
             // We are still participating in the computation
             levelContext.pinfo.getRedistributed().copyOwnerToAll(levelContext.rhs.getRedistributed(),
                                                     levelContext.rhs.getRedistributed());
+// std::cout << "------before: solver_->apply(.1.)\n";//Razvan
             solver_->apply(levelContext.update.getRedistributed(),
                            levelContext.rhs.getRedistributed(), res);
+// std::cout << "------after : solver_->apply(.1.)\n";//Razvan
           }
           levelContext.redist->redistributeBackward(*levelContext.update, levelContext.update.getRedistributed());
           levelContext.pinfo->copyOwnerToAll(*levelContext.update, *levelContext.update);
         }else{
           levelContext.pinfo->copyOwnerToAll(*levelContext.rhs, *levelContext.rhs);
+// std::cout << "------before: solver_->apply(.2.)\n";//Razvan
           solver_->apply(*levelContext.update, *levelContext.rhs, res);
+// std::cout << "------after : solver_->apply(.2.)\n";//Razvan
         }
 
         if (!res.converged)
           coarsesolverconverged = false;
       }else{
         // presmoothing
+// std::cout << "------before: presmooth(levelContext, preSteps_);\n";//Razvan
         presmooth(levelContext, preSteps_);
+// std::cout << "------after : presmooth(levelContext, preSteps_);\n";//Razvan
 
 #ifndef DUNE_AMG_NO_COARSEGRIDCORRECTION
         bool processNextLevel = moveToCoarseLevel(levelContext);
@@ -887,7 +912,9 @@ namespace Dune
             mgc(levelContext);
         }
 
+// std::cout << "------before: moveToFineLevel(levelContext, processNextLevel);\n";//Razvan
         moveToFineLevel(levelContext, processNextLevel);
+// std::cout << "------after : moveToFineLevel(levelContext, processNextLevel);\n";//Razvan
 #else
         *lhs=0;
 #endif
@@ -899,13 +926,17 @@ namespace Dune
           }
         }
         // postsmoothing
+// std::cout << "------before: postsmooth(levelContext, postSteps_)\n";//Razvan
         postsmooth(levelContext, postSteps_);
+// std::cout << "------after: postsmooth(levelContext, postSteps_)\n";//Razvan
 
       }
+// std::cout << "------out: AMGCPR<M,X,S,PI,A>::mgc(LevelContext& levelContext)\n";//Razvan
     }
 
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::additiveMgc(){
+// std::cout << "------in : AMGCPR<M,X,S,PI,A>::additiveMgc //opm::amgcpr.hh\n";//Razvan
       OPM_TIMEBLOCK(additiveMgc);
       // restrict residual to all levels
       typename ParallelInformationHierarchy::Iterator pinfo=matrices_->parallelInformation().finest();
@@ -947,9 +978,12 @@ namespace Dune
       --aggregates;
 
       for(typename Hierarchy<Domain,A>::Iterator coarseLhs = lhs--; coarseLhs != lhs_->finest(); coarseLhs = lhs--, --aggregates, --pinfo) {
+// std::cout << "------before: Transfer<typename OperatorHierarchy::AggregatesMap::AggregateDescriptor,Range,ParallelInformation>::prolongateVector //opm::amgcpr.hh\n";//Razvan
         Transfer<typename OperatorHierarchy::AggregatesMap::AggregateDescriptor,Range,ParallelInformation>
         ::prolongateVector(*(*aggregates), *coarseLhs, *lhs, 1.0, *pinfo);
+// std::cout << "------after : Transfer<typename OperatorHierarchy::AggregatesMap::AggregateDescriptor,Range,ParallelInformation>::prolongateVector //opm::amgcpr.hh\n";//Razvan
       }
+// std::cout << "------out: AMGCPR<M,X,S,PI,A>::additiveMgc //opm::amgcpr.hh\n";//Razvan
     }
 
 

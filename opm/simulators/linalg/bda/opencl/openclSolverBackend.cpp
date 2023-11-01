@@ -32,6 +32,7 @@
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
+#include <iostream> //Razvan
 
 // iff true, the nonzeroes of the matrix are copied row-by-row into a contiguous, pinned memory array, then a single GPU memcpy is done
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
@@ -234,7 +235,8 @@ void openclSolverBackend<block_size>::setOpencl(std::shared_ptr<cl::Context>& co
 
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
-    float it;
+// std::cout << "----in : openclSolverBackend :: gpu_pbicgstab(..); // from openclSolverBackend.cpp\n";//Razvan
+   float it;
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
 
@@ -267,6 +269,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         OPM_THROW(std::logic_error, "openclSolverBackend OpenCL enqueue[Fill|Copy]Buffer error");
     }
 
+// std::cout << "#####calling: norm = OpenclKernels::norm(d_r, d_tmp, N); // from openclSolverBackend.cpp\n";//Razvan
     norm = OpenclKernels::norm(d_r, d_tmp, N);
     norm_0 = norm;
 
@@ -284,10 +287,12 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     }
     for (it = 0.5; it < maxit; it += 0.5) {
         rhop = rho;
+// std::cout << "#####calling:  rho = OpenclKernels::dot(d_rw, d_r, d_tmp, N); // from openclSolverBackend.cpp\n";//Razvan
         rho = OpenclKernels::dot(d_rw, d_r, d_tmp, N);
 
         if (it > 1) {
             beta = (rho / rhop) * (alpha / omega);
+// std::cout << "#####calling: OpenclKernels::custom(d_p, d_v, d_r, omega, beta, N); // from openclSolverBackend.cpp\n";//Razvan
             OpenclKernels::custom(d_p, d_v, d_r, omega, beta, N);
         }
         if (verbosity >= 3) {
@@ -296,14 +301,17 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_prec.start();
         }
 
+// std::cout << "----before: (1/2) prec->apply(d_p, d_pw); // from openclSolverBackend.cpp\n";//Razvan
         // pw = prec(p)
         prec->apply(d_p, d_pw);
+// std::cout << "----after : (1/2) prec->apply(d_p, d_pw); // from openclSolverBackend.cpp\n";//Razvan
         if (verbosity >= 3) {
             queue->finish();
             t_prec.stop();
             t_spmv.start();
         }
 
+// std::cout << "#####calling: (1/2) OpenclKernels::spmv(d_Avals, d_Acols, d_Arows, d_pw, d_v, Nb, block_size); // from openclSolverBackend.cpp\n";//Razvan
         // v = A * pw
         OpenclKernels::spmv(d_Avals, d_Acols, d_Arows, d_pw, d_v, Nb, block_size);
         if (verbosity >= 3) {
@@ -314,6 +322,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // apply wellContributions
         if(wellContribs.getNumWells() > 0){
+// std::cout << "#####calling: static_cast<WellContributionsOCL&>(wellContribs).apply(d_pw, d_v); // from openclSolverBackend.cpp\n";//Razvan
             static_cast<WellContributionsOCL&>(wellContribs).apply(d_pw, d_v);
         }
         if(verbosity >= 3) {
@@ -322,10 +331,14 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_rest.start();
         }
 
+// std::cout << "#####calling: tmp1 = OpenclKernels::dot(d_rw, d_v, d_tmp, N); // from openclSolverBackend.cpp\n";//Razvan
         tmp1 = OpenclKernels::dot(d_rw, d_v, d_tmp, N);
         alpha = rho / tmp1;
+// std::cout << "#####calling: OpenclKernels::axpy(d_v, -alpha, d_r, N);      // r = r - alpha * v\n";//Razvan
         OpenclKernels::axpy(d_v, -alpha, d_r, N);      // r = r - alpha * v
+// std::cout << "#####calling: OpenclKernels::axpy(d_pw, alpha, d_x, N);      // x = x + alpha * pw\n";//Razvan
         OpenclKernels::axpy(d_pw, alpha, d_x, N);      // x = x + alpha * pw
+// std::cout << "#####calling: norm = OpenclKernels::norm(d_r, d_tmp, N);\n";//Razvan
         norm = OpenclKernels::norm(d_r, d_tmp, N);
         if (verbosity >= 3) {
             queue->finish();
@@ -342,13 +355,16 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         if (verbosity >= 3) {
             t_prec.start();
         }
+// std::cout << "----before: (2/2) prec->apply(d_r, d_s); // from openclSolverBackend.cpp\n";//Razvan
         prec->apply(d_r, d_s);
+// std::cout << "----after : (2/2) prec->apply(d_r, d_s); // from openclSolverBackend.cpp\n";//Razvan
         if (verbosity >= 3) {
             queue->finish();
             t_prec.stop();
             t_spmv.start();
         }
 
+// std::cout << "#####calling: (2/2) OpenclKernels::spmv(d_Avals, d_Acols, d_Arows, d_s, d_t, Nb, block_size); // from openclSolverBackend.cpp\n";//Razvan
         // t = A * s
         OpenclKernels::spmv(d_Avals, d_Acols, d_Arows, d_s, d_t, Nb, block_size);
         if(verbosity >= 3){
@@ -359,6 +375,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         // apply wellContributions
         if(wellContribs.getNumWells() > 0){
+// std::cout << "#####calling: (2/2) static_cast<WellContributionsOCL&>(wellContribs).apply(d_s, d_t); // from openclSolverBackend.cpp\n";//Razvan
             static_cast<WellContributionsOCL&>(wellContribs).apply(d_s, d_t);
         }
         if (verbosity >= 3) {
@@ -367,11 +384,16 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_rest.start();
         }
 
+// std::cout << "#####calling: tmp1 = OpenclKernels::dot(d_t, d_r, d_tmp, N);\n";//Razvan
         tmp1 = OpenclKernels::dot(d_t, d_r, d_tmp, N);
+// std::cout << "#####calling: tmp2 = OpenclKernels::dot(d_t, d_t, d_tmp, N);\n";//Razvan
         tmp2 = OpenclKernels::dot(d_t, d_t, d_tmp, N);
         omega = tmp1 / tmp2;
+// std::cout << "#####calling: OpenclKernels::axpy(d_s, omega, d_x, N);     // x = x + omega * s\n";//Razvan
         OpenclKernels::axpy(d_s, omega, d_x, N);     // x = x + omega * s
+// std::cout << "#####calling: OpenclKernels::axpy(d_t, -omega, d_r, N);    // r = r - omega * t\n";//Razvan
         OpenclKernels::axpy(d_t, -omega, d_r, N);    // r = r - omega * t
+// std::cout << "#####calling: norm = OpenclKernels::norm(d_r, d_tmp, N);\n";//Razvan
         norm = OpenclKernels::norm(d_r, d_tmp, N);
         if (verbosity >= 3) {
             queue->finish();
@@ -401,10 +423,10 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
-    c_prec += t_prec.elapsed();
-    c_spmv += t_spmv.elapsed();
-    c_rest += t_rest.elapsed();
-    c_total1 += t_total.elapsed();
+    c_prec += t_prec.stop();
+    c_spmv += t_spmv.stop();
+    c_rest += t_rest.stop();
+    c_total1 += t_total.stop();
 
     if (verbosity >= 3) {
         std::ostringstream out;
@@ -420,6 +442,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         out << "---openclSolver::cum total_solve: " << c_total1 << " s\n";
        OpmLog::info(out.str());
     }
+// std::cout << "----out: openclSolverBackend :: gpu_pbicgstab(..); // from openclSolverBackend.cpp\n";//Razvan
 }
 
 
@@ -625,10 +648,13 @@ bool openclSolverBackend<block_size>::create_preconditioner() {
 template <unsigned int block_size>
 void openclSolverBackend<block_size>::solve_system(WellContributions &wellContribs, BdaResult &res) {
     Timer t;
+// std::cout << "---in : openclSolverBackend<block_size>::solve_system(..); // in openclSolverBackend.cpp\n";//Razvan
 
     // actually solve
     try {
+// std::cout << "---before: gpu_pbicgstab(wellContribs, res); // in openclSolverBackend.cpp\n";//Razvan
         gpu_pbicgstab(wellContribs, res);
+// std::cout << "---after : gpu_pbicgstab(wellContribs, res); // in openclSolverBackend.cpp\n";//Razvan
     } catch (const cl::Error& error) {
         std::ostringstream oss;
         oss << "openclSolverBackend::solve_system error: " << error.what() << "(" << error.err() << ")\n";
@@ -648,7 +674,7 @@ void openclSolverBackend<block_size>::solve_system(WellContributions &wellContri
         out << "---openclSolver::cum solve total2: " << c_total2 << " s";
        OpmLog::info(out.str());
     }
-
+// std::cout << "---out: openclSolverBackend<block_size>::solve_system(..); // in openclSolverBackend.cpp\n";//Razvan
 } // end solve_system()
 
 
@@ -691,7 +717,7 @@ SolverStatus openclSolverBackend<block_size>::solve_system(std::shared_ptr<Block
         }
         copy_system_to_gpu();
     } else {
-        update_system(matrix->nnzValues, b);
+        update_system(matrix->nnzValues, b);//TODO: Razvan: do we need to update the system matrix???
         if (!create_preconditioner()) {
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }

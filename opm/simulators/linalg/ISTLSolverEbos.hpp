@@ -189,6 +189,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
               parameters_{parameters},
               forceSerial_(forceSerial)
         {
+std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//Razvan
             initialize();
         }
 
@@ -469,6 +470,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         void prepareFlexibleSolver()
         {
+std::cout << "in ISTLSolverEbos.hpp::prepareFlexibleSolver()\n";//Razvan
             OPM_TIMEBLOCK(flexibleSolverPrepare);
             if (shouldCreateSolver()) {
                 std::function<Vector()> trueFunc =
@@ -489,6 +491,15 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                                          trueFunc,
                                                          forceSerial_,
                                                          *comm_);
+// std::cout << " Solver  used = " << prm_[activeSolverNum_].get<std::string>("solver") << std::endl;//Razvan
+// std::cout << " Precond used = " << prm_[activeSolverNum_].get<std::string>("preconditioner.type") << std::endl;//Razvan
+//                flexibleSolver_[activeSolverNum_].create(getMatrix(),
+//                                                          isParallel(),
+//                                                          prm_[activeSolverNum_],
+//                                                          pressureIndex,
+//                                                          trueFunc,
+//                                                          forceSerial_,
+//                                                          *comm_);
             }
             else
             {
