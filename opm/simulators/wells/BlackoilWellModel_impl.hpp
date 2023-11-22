@@ -1948,7 +1948,7 @@ std::cout <<"--out: BlackoilWellModel::applyScaleAdd(..); // in OPM -> wells/Bla
             }
         }
 
-        changed_well_to_group = comm.sum(changed_well_to_group);
+        changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
         if (changed_well_to_group) {
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
             changed_well_group = true;
@@ -1963,7 +1963,7 @@ std::cout <<"--out: BlackoilWellModel::applyScaleAdd(..); // in OPM -> wells/Bla
                 changed_well_individual = changed_well || changed_well_individual;
             }
         }
-        changed_well_individual = comm.sum(changed_well_individual);
+        changed_well_individual = comm.sum(static_cast<int>(changed_well_individual));
         if (changed_well_individual) {
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
             changed_well_group = true;
