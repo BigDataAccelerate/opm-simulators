@@ -595,7 +595,12 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
 
-            well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
+            try {
+                well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
+            } catch (std::runtime_error& e) {
+                const std::string msg = fmt::format("Exception during testing of well: {}. The well will not open.\n Exception message: {}", wellEcl.name(), e.what());
+                deferred_logger.warning("WELL_TESTING_FAILED", msg);
+            }
         }
     }
 
