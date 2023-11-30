@@ -597,7 +597,7 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
 
             try {
                 well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
-            } catch (std::runtime_error& e) {
+            } catch (std::exception& e) {
                 const std::string msg = fmt::format("Exception during testing of well: {}. The well will not open.\n Exception message: {}", wellEcl.name(), e.what());
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
             }
