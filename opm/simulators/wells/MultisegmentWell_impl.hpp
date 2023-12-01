@@ -1109,7 +1109,7 @@ std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRU
                 const double thp = WellBhpThpCalculator(*this).calculateThpFromBhp(well_rates_bhp_limit,
                                                                                    bhp_limit,
                                                                                    this->getRefDensity(),
-                                                                                   this->wellEcl().alq_value(),
+                                                                                   this->wellEcl().alq_value(summaryState),
                                                                                    thp_limit,
                                                                                    deferred_logger);
                 if ( (this->isProducer() && thp < thp_limit) || (this->isInjector() && thp > thp_limit) ) {
