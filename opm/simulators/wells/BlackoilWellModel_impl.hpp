@@ -422,6 +422,7 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
         updateAndCommunicateGroupData(reportStepIdx,
                                       ebosSimulator_.model().newtonMethod().numIterations());
 
+        this->wellState().updateWellsDefaultALQ(this->wells_ecl_, this->summaryState());
         this->wellState().gliftTimeStepInit();
 
         const double simulationTime = ebosSimulator_.time();
