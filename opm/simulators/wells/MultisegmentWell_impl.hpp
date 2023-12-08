@@ -1629,7 +1629,6 @@ std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRU
         const auto well_status_orig = this->wellStatus_;
         const auto operability_orig = this->operability_status_;
         auto well_status_cur = well_status_orig;
-        int status_switch_count = 0;
         // only allow switcing if well is not under zero-rate target and is open from schedule
         bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
         allow_switching = allow_switching && (!fixed_control || !fixed_status);
@@ -1649,7 +1648,6 @@ std::cout << "---out: MultisegmentWell::addWellContributions(..) (addWells = TRU
                     switch_count++;
                     if (well_status_cur != this->wellStatus_) {
                         well_status_cur = this->wellStatus_;
-                        status_switch_count++;
                     }
                 }
                 if (!changed && final_check) {
