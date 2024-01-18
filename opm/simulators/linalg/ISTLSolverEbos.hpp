@@ -102,7 +102,7 @@ struct FlexibleSolverInfo
                 bool parallel,
                 const PropertyTree& prm,
                 std::size_t pressureIndex,
-                std::function<Vector()> trueFunc,
+                std::function<Vector()> weightCalculator,
                 const bool forceSerial,
                 Comm& comm);
 
@@ -478,13 +478,13 @@ std::cout << "in ISTLSolverEbos.hpp::prepareFlexibleSolver()\n";//Razvan
                     auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
                     flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
                 }
-                std::function<Vector()> trueFunc = this->getWeightsCalculator(prm_[activeSolverNum_], getMatrix(), pressureIndex);
+                std::function<Vector()> weightCalculator = this->getWeightsCalculator(prm_[activeSolverNum_], getMatrix(), pressureIndex);
                 OPM_TIMEBLOCK(flexibleSolverCreate);
                 flexibleSolver_[activeSolverNum_].create(getMatrix(),
                                                          isParallel(),
                                                          prm_[activeSolverNum_],
                                                          pressureIndex,
-                                                         trueFunc,
+                                                         weightCalculator,
                                                          forceSerial_,
                                                          *comm_);
 // std::cout << " Solver  used = " << prm_[activeSolverNum_].get<std::string>("solver") << std::endl;//Razvan
