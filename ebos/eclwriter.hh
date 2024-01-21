@@ -215,7 +215,6 @@ public:
 
         if (this->collectToIORank_.isParallel()) {
             OPM_BEGIN_PARALLEL_TRY_CATCH()
-
             this->collectToIORank_.collect({},
                                            eclOutputModule_->getBlockData(),
                                            localWellData,
@@ -243,7 +242,6 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
                                        this->simulator_.vanguard().grid().comm());
         }
-
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
         Inplace inplace;
@@ -321,6 +319,9 @@ public:
     {
         OPM_TIMEBLOCK(writeOutput);
 
+//         if(this->summaryState().has("WBHP:INJ"))//Razvan
+//             std::cout << " WBHP:INJ = " << this->summaryState().get("WBHP:INJ") << std::endl;
+//         
         const int reportStepNum = simulator_.episodeIndex() + 1;
         this->prepareLocalCellData(isSubStep, reportStepNum);
         this->eclOutputModule_->outputErrorLog(simulator_.gridView().comm());
@@ -350,6 +351,7 @@ public:
             this->eclOutputModule_->addRftDataToWells(localWellData, reportStepNum);
         }
 
+//NOTE-Razvan: removing the below collection does not matter for the well values because these are already stored together! ==>TODO: do find out where this are updated/written and by what function!!
         if (this->collectToIORank_.isParallel() ||
             this->collectToIORank_.doesNeedReordering())
         {
@@ -357,7 +359,7 @@ public:
             // inter-region flow rate values in order to create restart file
             // output.  There's consequently no need to collect those
             // properties on the I/O rank.
-
+std::cout <<"====> BEFORE this->collectToIORank_.collect(localCellData,...) ======\n";
             this->collectToIORank_.collect(localCellData,
                                            this->eclOutputModule_->getBlockData(),
                                            localWellData,
@@ -368,6 +370,7 @@ public:
                                            /* interRegFlows = */ {},
                                            flowsn,
                                            floresn);
+std::cout <<"====> AFTER this->collectToIORank_.collect(localCellData,...) ======\n";
         }
 
         if (this->collectToIORank_.isIORank()) {
@@ -382,7 +385,7 @@ public:
                                 std::move(localWellTestState),
                                 this->actionState(),
                                 this->udqState(),
-                                this->summaryState(),
+                                this->summaryState(),   //NOTE-Razvan: it seems this is not collected, already in 'merged' state.
                                 this->simulator_.problem().thresholdPressure().getRestartVector(),
                                 curTime, nextStepSize,
                                 EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision),

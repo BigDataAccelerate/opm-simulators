@@ -257,7 +257,7 @@ void EclActionHandler::evalUDQAssignments(const unsigned episodeIdx,
                                           UDQState& udq_state)
 {
     const auto& udq = schedule_[episodeIdx].udq();
-
+std::cout << "in EclActionHandler::evalUDQAssignments(..)\n";//Razvan
     udq.eval_assign(episodeIdx,
                     this->schedule_,
                     this->schedule_.wellMatcher(episodeIdx),

@@ -169,6 +169,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     // callback to eclIO serial writeTimeStep method
     void run()
     {
+std::cout << "in EclWriteTasklet :: run ()\n";
         this->eclIO_.writeTimeStep(this->actionState_,
                                    this->wtestState_,
                                    this->summaryState_,
@@ -178,6 +179,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                                    this->secondsElapsed_,
                                    std::move(this->restartValue_),
                                    this->writeDoublePrecision_);
+std::cout << "out EclWriteTasklet :: run ()\n";
     }
 };
 
@@ -575,6 +577,12 @@ doWriteOutput(const int                     reportStepNum,
         }
     }
 
+// std::cout << "------ BEGIN checking summarystate -----\n";//Razvan
+//         if(summaryState.has("WBHP:INJ"))//Razvan
+//             std::cout << " WBHP:INJ = " << summaryState.get("WBHP:INJ") << std::endl;//Razvan
+// std::cout << "------ END   checking summarystate -----\n";//Razvan
+
+    
     // first, create a tasklet to write the data for the current time
     // step to disk
     auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(

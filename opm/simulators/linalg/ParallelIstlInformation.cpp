@@ -54,6 +54,8 @@ public:
 
     void operator()(const typename ParallelIndexSet::IndexPair& pair)
     {
+// static int iii = 0; 
+// std::cout << " in IndexSetInserter :: operator!! " << iii++ << " : " << pair.global() << " / " << pair.local() << " (global/local)  --> local_component_size_ = " << local_component_size_ << std::endl;
         for(std::size_t i = 0; i < num_components_; i++)
             indexSet_->add(i * component_size_ + pair.global(),
                            LocalIndex(i * local_component_size_  + pair.local(),
@@ -189,7 +191,9 @@ void ParallelISTLInformation::copyValuesTo(ParallelIndexSet& indexSet,
                                            std::size_t local_component_size,
                                            std::size_t num_components) const
 {
+std::cout << "---in:  ParallelISTLInformation::copyValuesTo(..)\n";
     ParallelIndexSet::GlobalIndex global_component_size  = local_component_size;
+std::cout << "     global_component_size = " << global_component_size << std::endl;
     if ( num_components > 1 )
     {
         ParallelIndexSet::GlobalIndex max_gi = 0;
@@ -207,6 +211,7 @@ void ParallelISTLInformation::copyValuesTo(ParallelIndexSet& indexSet,
     std::for_each(indexSet_->begin(), indexSet_->end(), inserter);
     indexSet.endResize();
     remoteIndices.rebuild<false>();
+std::cout << "---out: ParallelISTLInformation::copyValuesTo(..)\n";
 }
 
 template<class T>

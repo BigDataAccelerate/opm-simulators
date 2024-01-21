@@ -306,7 +306,7 @@ void WellBhpThpCalculator::updateThp(const double rho,
     if (thp_controlled) {
         return;
     }
-
+    
     // the well is under other control types, we calculate the thp based on bhp and rates
     std::vector<double> rates(3, 0.0);
 

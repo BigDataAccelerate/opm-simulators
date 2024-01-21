@@ -424,25 +424,25 @@ std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, Accelerator
 std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);//Razvan
 int dumpVector = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
 
-std::cout << " ######################## BEFORE solveJacobianSystem(x) ###################\n";//Razvan
+std::cout << " ######################## BEFORE solveJacobianSystem(x) ################### " << itercount << std::endl;//Razvan
 // std::cout << "nc = " << nc << std::endl; ==> this prints 44431
 // std::cout << "numEq = " << numEq << std::endl; ==> this prints 3
+std::cout << "------------------------------------------ > x size = " << x.size() << std::endl;
 
-if(dumpVector == 20){
-Dune::storeMatrixMarket(x, "x_"+accelerator_mode+"_"+linsolver+"_init_"+std::to_string(itercount)+".mm");//Razvan
-}
+// if(dumpVector == 20){
+Dune::storeMatrixMarket(x, "x_"+accelerator_mode+"_"+linsolver+"-init_iter_"+std::to_string(itercount)+"_rank_"+std::to_string(ebosSimulator_.gridView().comm().rank())+"of"+std::to_string(ebosSimulator_.gridView().comm().size()-1)+".mm");//Razvan
+// }
                     t3.start();
                     solveJacobianSystem(x); 
                     t_solve += t3.stop();
                     std::cout << "BlackoilModelEbos::nonlinearIteration cum solve time: " << t_solve << "\n";
                     std::cout << "BlackoilModelEbos::report.linear_solve_time 1: " << report.linear_solve_time << "\n";
 
-if(dumpVector == 20){
-Dune::storeMatrixMarket(x, "x_"+accelerator_mode+"_"+linsolver+"_solved_"+std::to_string(itercount)+".mm");
-}
+// if(dumpVector == 20){
+Dune::storeMatrixMarket(x, "x_"+accelerator_mode+"_"+linsolver+"-solved_iter_"+std::to_string(itercount)+"_rank_"+std::to_string(ebosSimulator_.gridView().comm().rank())+"of"+std::to_string(ebosSimulator_.gridView().comm().size()-1)+".mm");
+// }
 
-std::cout << " ######################## AFTER solveJacobianSystem(x) ###################\n";
-
+std::cout << " ######################## AFTER  solveJacobianSystem(x) ################### " << itercount << std::endl;//Razvan
                     report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
                     std::cout << "BlackoilModelEbos::report.linear_solve_time 2: " << report.linear_solve_time << "\n";
@@ -465,12 +465,13 @@ std::cout << " ######################## AFTER solveJacobianSystem(x) ###########
                 std::cout << "========== BlackoilModelEbos::nonlinearIteration cum time: " << t_total << "(+" << t1.elapsed() << ") ========\n";
                 perfTimer.reset();
                 perfTimer.start();
-itercount++;//Razvan
-if(itercount == 2){std::cout<<"exit after solveJacobianSystem(x) in BlackoilModelEbos\n"; exit(0);}//Razvan
 
                 // handling well state update before oscillation treatment is a decision based
                 // on observation to avoid some big performance degeneration under some circumstances.
                 // there is no theorectical explanation which way is better for sure.
+// for (int i=0; i < x.size() ; i++)
+//     x[i] = -1;
+// Dune::storeMatrixMarket(x, "x_-solved_iter_"+std::to_string(itercount)+"_rank_"+std::to_string(ebosSimulator_.gridView().comm().rank())+"of"+std::to_string(ebosSimulator_.gridView().comm().size()-1)+"-reseted.mm");
                 wellModel().postSolve(x);
 
                 if (param_.use_update_stabilization_) {
@@ -494,6 +495,8 @@ if(itercount == 2){std::cout<<"exit after solveJacobianSystem(x) in BlackoilMode
                 // Apply the update, with considering model-dependent limitations and
                 // chopping of the update.
                 updateSolution(x);
+itercount++;//Razvan
+// if(itercount == 30){std::cout<<"exit after solveJacobianSystem(x) and updateSolution(x) in BlackoilModelEbos\n"; exit(0);}//Razvan
 
                 report.update_time += perfTimer.stop();
             }
@@ -510,7 +513,7 @@ if(itercount == 2){std::cout<<"exit after solveJacobianSystem(x) in BlackoilMode
             SimulatorReportSingle report;
             Dune::Timer perfTimer;
             perfTimer.start();
-            ebosSimulator_.problem().endTimeStep();
+            ebosSimulator_.problem().endTimeStep();//NOTE-Razvan: this updates the well values
             report.pre_post_time += perfTimer.stop();
             return report;
         }
@@ -519,6 +522,7 @@ if(itercount == 2){std::cout<<"exit after solveJacobianSystem(x) in BlackoilMode
         SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& /* timer */,
                                                 const int iterationIdx)
         {
+std::cout << " In BlackoilModelEbos.hpp :: assembleReservoir(..) \n";
             // -------- Mass balance equations --------
             ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             ebosSimulator_.problem().beginIteration();
@@ -631,6 +635,9 @@ if(itercount == 2){std::cout<<"exit after solveJacobianSystem(x) in BlackoilMode
         {
             static double t_total = 0.0, t_prepare = 0.0;
             auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
+std::cout << "ebosJac.N()   = " << ebosJac.N() << std::endl;
+std::cout << "ebosJac.M()   = " << ebosJac.M() << std::endl;
+std::cout << "ebosJac.NNZ() = " << ebosJac.nonzeroes() << std::endl;
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
 
@@ -704,6 +711,8 @@ if(itercount == 2){std::cout<<"exit after solveJacobianSystem(x) in BlackoilMode
         /// Apply an update to the primary variables.
         void updateSolution(const BVector& dx)
         {
+std::cout << "----update solution using b vector ------------------- > DX size = " << dx.size() << std::endl;
+
             OPM_TIMEBLOCK(updateSolution);
             auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
             SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx=*/0);

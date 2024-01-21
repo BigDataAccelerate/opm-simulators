@@ -1313,6 +1313,8 @@ updateWellPotentials(const int reportStepIdx,
                      DeferredLogger& deferred_logger)
 {
     auto well_state_copy = this->wellState();
+    
+    std::cout << " well_state_copy.numWells() = " << well_state_copy.numWells() << std::endl;//Razvan
 
     const bool write_restart_file = schedule().write_rst_file(reportStepIdx);
     auto exc_type = ExceptionType::NONE;

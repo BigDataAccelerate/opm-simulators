@@ -976,6 +976,9 @@ collect(const data::Solution&                                localCellData,
         const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
         const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn)
 {
+//TODO: continue from here to learn how the collect after each step works, and check also if the well data corresponds to the output in the plots!!!
+
+std::cout<<"In CollectDataToIORank :: collect (..)\n";//....exiting\n";exit(0);//Razvan
     globalCellData_ = {};
     globalBlockData_.clear();
     globalWellData_.clear();

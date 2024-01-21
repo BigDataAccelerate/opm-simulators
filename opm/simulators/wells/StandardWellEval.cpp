@@ -75,6 +75,7 @@ updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                                     const SummaryState& summary_state,
                                     DeferredLogger& deferred_logger) const
 {
+std::cout <<"------in:  StandardWellEval :: updateWellStateFromPrimaryVariables(..)\n";
     this->primary_variables_.copyToWellState(well_state, deferred_logger);
 
     WellBhpThpCalculator(baseif_).
@@ -85,6 +86,7 @@ updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                        FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
                        FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
                       well_state, summary_state, deferred_logger);
+std::cout <<"------out: StandardWellEval :: updateWellStateFromPrimaryVariables(..)\n";
 }
 
 template<class FluidSystem, class Indices, class Scalar>

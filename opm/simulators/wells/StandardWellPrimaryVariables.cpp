@@ -119,7 +119,8 @@ resize(const int numWellEq)
 
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
-update(const WellState& well_state,
+update(const WellState& well_state,  //Razvan-NOTE: values in the well_state are used to update bhp!!!
+       //well_state.well(well_index = 1) : ############ ws.bhp = 3.33025e+07
        const bool stop_or_zero_rate_target,
        DeferredLogger& deferred_logger)
 {
@@ -131,6 +132,7 @@ update(const WellState& well_state,
     const int np = well_.numPhases();
     const auto& pu = well_.phaseUsage();
     const auto& ws = well_state.well(well_index);
+std::cout << " well_state.well(well_index = " << well_index << ") : ";
     // the weighted total well rate
     double total_well_rate = 0.0;
     for (int p = 0; p < np; ++p) {
@@ -221,6 +223,7 @@ update(const WellState& well_state,
         }
     }
 
+std::cout << "############ ws.bhp = " << ws.bhp << std::endl;
     // BHP
     value_[Bhp] = ws.bhp;
 }
@@ -300,7 +303,9 @@ updateNewton(const BVectorWell& dwells,
     // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
     // so that bhp constaint can be an active control when needed.
     constexpr double bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
+std::cout << " ---before updating value_[" << Bhp << "] = " << value_[Bhp] << std::endl; 
     value_[Bhp] = std::max(value_[Bhp] - dx1_limited, bhp_lower_limit);
+std::cout << " ---after updating value_[" << Bhp << "] = " << value_[Bhp] << std::endl; 
 }
 
 template<class FluidSystem, class Indices, class Scalar>
@@ -396,7 +401,7 @@ copyToWellState(WellState& well_state,
 
     auto& ws = well_state.well(well_.indexOfWell());
     ws.bhp = value_[Bhp];
-
+std::cout << " !!!!!!!!!!!!!!!!!!!! ws.bhp = " << ws.bhp << " ; Bhp = " << Bhp << std::endl;//Razvan
     // calculate the phase rates based on the primary variables
     // for producers, this is not a problem, while not sure for injectors here
     if (well_.isProducer()) {

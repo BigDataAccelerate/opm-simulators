@@ -129,7 +129,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
                                                     [[maybe_unused]] Comm& comm)
 
 {
-// std::cout << " in ISTLSolverEbos.cpp -> FlexibleSolverInfo<Matrix,Vector,Comm>::create \n";//Razvan
+std::cout << " in ISTLSolverEbos.cpp -> FlexibleSolverInfo<Matrix,Vector,Comm>::create(..)\n";//Razvan
     // Write sizes of linear systems on all ranks to debug log.
     if (!forceSerial) {
 #if HAVE_MPI

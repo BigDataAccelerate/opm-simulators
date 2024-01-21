@@ -31,7 +31,7 @@
 // Extracts the information about the data decomposition from the grid for dune-istl
 void extractParallelGridInformationToISTL(const Dune::CpGrid& grid, std::any& anyComm)
 {
-    if(grid.comm().size()>1)
+if(grid.comm().size()>1)
     {
         // this is a parallel run with distributed data.
         Dune::CpGrid& mgrid=const_cast<Dune::CpGrid&>(grid);

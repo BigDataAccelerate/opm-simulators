@@ -146,7 +146,7 @@ public:
 
     //! \brief Set a value. Note that this does not also set the corresponding evaluation.
     void setValue(const int idx, const Scalar val)
-    { value_[idx] = val; }
+    { value_[idx] = val; std::cout << "do we get here?\n"; exit(0);}
 
 private:
     //! \brief Calculate a relaxation factor for producers.

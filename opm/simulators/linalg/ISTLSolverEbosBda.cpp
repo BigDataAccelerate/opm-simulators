@@ -95,7 +95,12 @@ apply(Vector& rhs,
       Vector& x,
       Dune::InverseOperatorResult& result)
 {
-// std::cout << "-in : ISTLSolverEbosBda :: apply(..); // from ISTLBridge.cpp\n";//Razvan
+std::cout << "-in : ISTLSolverEbosBda :: apply(..); // from ISTLBridge.cpp\n";//Razvan
+
+std::cout << "---GPU:: matrix N   size = " << matrix.N() << std::endl;
+std::cout << "---GPU:: matrix M   size = " << matrix.M() << std::endl;
+std::cout << "---GPU:: matrix NNZ size = " << matrix.nonzeroes() << std::endl;
+
     bool use_gpu = bridge_->getUseGpu();
     if (use_gpu) {
         Dune::Timer t5;
@@ -175,6 +180,7 @@ blockJacobiAdjacency(const Grid& grid,
     using size_type = typename Matrix::size_type;
     using Iter = typename Matrix::CreateIterator;
     size_type numCells = grid.size(0);
+// std::cout << "numCells = " << numCells << std::endl;
     blockJacobiForGPUILU0_ = std::make_unique<Matrix>(numCells, numCells,
                                                       nonzeroes, Matrix::row_wise);
 
@@ -211,6 +217,7 @@ blockJacobiAdjacency(const Grid& grid,
             }
         }
     }
+// std::cout << "Exiting in ISTLSolverEbosBda...\n";exit(0);
 }
 
 template<class Matrix, class Vector>

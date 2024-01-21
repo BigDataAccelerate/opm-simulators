@@ -384,7 +384,8 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                 SimulatorReportSingle substepReport;
                 std::string causeOfFailure;
                 try {
-                    substepReport = solver.step(substepTimer);
+std::cout << "In AdaptiveTimeSteppingEbos :: step(..)\n" << std::endl;
+                    substepReport = solver.step(substepTimer);//NOTE-Razvan: this updates the well values
 
                     if (solverVerbose_) {
                         // report number of linear iterations
@@ -497,7 +498,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                         time::StopWatch perfTimer;
                         perfTimer.start();
 
-                        ebosProblem.writeOutput();
+                        ebosProblem.writeOutput();//NOTE-Razvan: this prints points (1-4) and (6) 
 
                         report.success.output_write_time += perfTimer.secsSinceStart();
                     }

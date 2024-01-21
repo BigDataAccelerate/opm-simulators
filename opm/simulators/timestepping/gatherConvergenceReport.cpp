@@ -169,6 +169,7 @@ namespace
         auto* data = const_cast<char*>(recv_buffer.data());
         double reportTime{0.0};
         MPI_Unpack(data, recv_buffer.size(), &offset, &reportTime, 1, MPI_DOUBLE, mpi_communicator);
+//std::cout<<"   in unpackSingleConvergenceReport --> data = " << data << std::endl;//Razvan
         ConvergenceReport cr{reportTime};
         int num_rf = -1;
         MPI_Unpack(data, recv_buffer.size(), &offset, &num_rf, 1, MPI_INT, mpi_communicator);
@@ -213,8 +214,10 @@ namespace Opm
     /// (per-process) reports.
     ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Parallel::Communication mpi_communicator)
     {
+//std::cout << "In gatherConvergenceReport.cpp :: gatherConvergenceReport --> THIS IS MPI METHOD THAT GATHERS CONVERGENCE INFO!!!!!!!!!!!!!!!!!!!\n";//Razvan
         // Pack local report.
         int message_size = messageSize(local_report, mpi_communicator);
+//std::cout << "   message_size = " << message_size << std::endl;//Razvan
         std::vector<char> buffer(message_size);
         int offset = 0;
         packConvergenceReport(local_report, buffer, offset,mpi_communicator);
@@ -223,6 +226,7 @@ namespace Opm
         // Get message sizes and create offset/displacement array for gathering.
         int num_processes = -1;
         MPI_Comm_size(mpi_communicator, &num_processes);
+//std::cout << "   num_processes = " << num_processes << std::endl;//Razvan
         std::vector<int> message_sizes(num_processes);
         MPI_Allgather(&message_size, 1, MPI_INT, message_sizes.data(), 1, MPI_INT, mpi_communicator);
         std::vector<int> displ(num_processes + 1, 0);
@@ -230,10 +234,14 @@ namespace Opm
 
         // Gather.
         std::vector<char> recv_buffer(displ.back());
+//std::cout << "recv_buffer_before = " << const_cast<char*>(recv_buffer.data()) << std::endl;//Razvan
+//std::cout << displ.data() << std::endl;
         MPI_Allgatherv(buffer.data(), buffer.size(), MPI_PACKED,
                        const_cast<char*>(recv_buffer.data()), message_sizes.data(),
                        displ.data(), MPI_PACKED,
                        mpi_communicator);
+//std::cout << "recv_buffer_after = " << const_cast<char*>(recv_buffer.data()) << std::endl;//Razvan
+//std::cout << displ.data() << std::endl;
 
         // Unpack.
         ConvergenceReport global_report = unpackConvergenceReports(recv_buffer, displ, mpi_communicator);

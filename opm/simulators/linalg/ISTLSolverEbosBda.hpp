@@ -153,7 +153,7 @@ public:
             if (on_io_rank) {
                 OpmLog::warning("Cannot use AcceleratorMode feature with MPI, setting AcceleratorMode to 'none'.");
             }
-            accelerator_mode = "none";
+//             accelerator_mode = "none";//Razvan remove for MPI testing with GPU
         }
 
         if (accelerator_mode == "none") {
@@ -237,7 +237,21 @@ public:
         // Write linear system if asked for.
         const int verbosity = this->prm_[this->activeSolverNum_].template get<int>("verbosity", 0);
         const bool write_matrix = verbosity > 10;
+std::cout << "------------------------------------------ > rhs size = " << this->rhs_->size() << std::endl;
+std::cout << "------------------------------------------ > matrix size N = " << this->getMatrix().N() << std::endl;
+std::cout << "------------------------------------------ > matrix size M = " << this->getMatrix().M() << std::endl;
+std::cout << "------------------------------------------ > matrix size NNZ = " << countNonZeros(this->getMatrix()) << std::endl;
+        
         if (write_matrix) {
+//  rhs = const class Dune::BlockVector  < Dune::FieldVector<double, 3>, 
+//                                           std::allocator<Dune::FieldVector<double, 3> > 
+//                                       >
+// matrix = const class Dune::BCRSMatrix < Opm::MatrixBlock<double, 3, 3>, 
+//                                         std::allocator<Opm::MatrixBlock<double, 3, 3> > 
+//                                       >
+
+//TODO: what does this matrix hold, which data? is the complete data, or the partitioned data in smaller pieces?
+
             Helper::writeSystem(this->simulator_, //simulator is only used to get names
                                 this->getMatrix(),
                                 *(this->rhs_),

@@ -497,7 +497,8 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
         }
-
+static int countUpdate = 0; 
+std::cout << " in BlackoilWellModel_impl.hpp @ BlackoilWellModel<TypeTag>::beginTimeStep() --- before updateWellPotentials(..).... count  = " << countUpdate++ << std::endl;
         // calculate the well potentials
         try {
             updateWellPotentials(reportStepIdx,
@@ -945,7 +946,7 @@ std::cout << " when do we get here?? -> BlackoilWellModel<TypeTag>::linearizeDom
         }
 
         // Collect log messages and print.
-
+std::cout << "In BlackoilWellModel_impl.hpp @ BlackoilWellModel<TypeTag> :: createWellContainer\n";//Razvan
         const Opm::Parallel::Communication& comm = grid().comm();
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         if (terminal_output_) {
@@ -1700,6 +1701,7 @@ std::cout <<"--out: BlackoilWellModel::applyScaleAdd(..); // in OPM -> wells/Bla
     BlackoilWellModel<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
+std::cout << ">>>>>>>>>>>>>> in BlackoilWellModel_impl.hpp @ BlackoilWellModel<TypeTag>::recoverWellSolutionAndUpdateWellState(const BVector& x) <<<<<<<<<\n";
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
@@ -1854,7 +1856,7 @@ std::cout <<"--out: BlackoilWellModel::applyScaleAdd(..); // in OPM -> wells/Bla
                 local_report += report;
             }
         }
-
+std::cout << "In BlackoilWellModel_impl.hpp @ BlackoilWellModel<TypeTag> :: getWellConvergence() \n";//Razvan
         const Opm::Parallel::Communication comm = grid().comm();
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         ConvergenceReport report = gatherConvergenceReport(local_report, comm);
@@ -2239,6 +2241,7 @@ std::cout <<"--out: BlackoilWellModel::applyScaleAdd(..); // in OPM -> wells/Bla
         for (int p = 0; p < np; ++p) {
             // make sure the potentials are positive
             ws.well_potentials[p] = std::max(0.0, potentials[p]);
+std::cout << "      ws.well_potentials[" << p << "] = " << ws.well_potentials[p] << std::endl;
         }
     }
 

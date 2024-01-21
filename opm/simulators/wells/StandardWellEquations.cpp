@@ -194,10 +194,17 @@ void StandardWellEquations<Scalar,numEq>::
 recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 {
     BVectorWell resWell = resWell_;
+std::cout <<  "--> resWell TODO: continue from here and figure out how the x vector is contibuting to the xw solution!!!: resWell[0] = "<< resWell << std::endl; //resWell size = 1 for spe1case1
+// std::cout <<  "--> parallelB_[0][0] = "<< parallelB_[0] << std::endl;
+std::cout <<  "--> x size = "<< x.size() << std::endl;
+std::cout <<  "--> xw size = "<< xw.size() << std::endl;
+std::cout <<  "--> invDuneD_[0][0] = "<< invDuneD_[0][0] << std::endl;
     // resWell = resWell - B * x
     parallelB_.mmv(x, resWell);
     // xw = D^-1 * resWell
-    invDuneD_.mv(resWell, xw);
+    invDuneD_.mv(resWell, xw);//N=1, M=1 1 for spe1case1
+for (int i=0; i < xw.size() ; i++)
+std::cout <<  "--> xw[" << i << "] = "<< xw[i] << std::endl;
 }
 
 #if COMPILE_BDA_BRIDGE

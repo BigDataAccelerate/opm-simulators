@@ -38,7 +38,7 @@
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
-#include <opm/simulators/linalg/matrixblock.hh>
+//#include <opm/simulators/linalg/matrixblock.hh> --> TODO: CAN BE CLEANED FROM REPO!!
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/WellOperators.hpp>
@@ -311,8 +311,14 @@ std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//R
             const bool firstcall = (matrix_ == nullptr);
 #if HAVE_MPI
             if (firstcall && isParallel()) {
+std::cout << "----------- initPrepare for MPI!!! \n";
+//TODO: check how often are values synced??-->only once to send the needed parallel info for the solver!
+ //+ Check also if the solvers actually use this parallel info to access data from other partition, which the GPU solver does not have built in!!!! so that would never work with MPI in the current implementation!!!
                 const std::size_t size = M.N();
+std::cout << "before checking what the parallelInfomation_ contains: \n";
+std::cout << "    size = " << size <<std::endl;
                 detail::copyParValues(parallelInformation_, size, *comm_);
+std::cout << "   exiting....\n";exit(0);//Razvan
             }
 #endif
 

@@ -203,7 +203,8 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
             report += model_->prepareStep(timer);
 
             int iteration = 0;
-std::cout << "  in NonlinearSolver.hpp -> NonlinearSolver::step \n";//Razvan
+            static int step = 0;
+std::cout << "---------------------------------------------  in NonlinearSolver.hpp -> NonlinearSolver::step " << step++ << std::endl;//Razvan
             // Let the model do one nonlinear iteration.
 
             // Set up for main solver loop.
@@ -247,7 +248,7 @@ std::cout << "  in NonlinearSolver.hpp -> NonlinearSolver::step \n";//Razvan
             }
 
             // Do model-specific post-step actions.
-            report += model_->afterStep(timer);
+            report += model_->afterStep(timer);//NOTE-Razvan: this updates the well values
             report.converged = true;
             return report;
         }

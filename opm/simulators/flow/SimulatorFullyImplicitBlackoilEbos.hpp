@@ -307,6 +307,7 @@ public:
         // Make cache up to date. No need for updating it in elementCtx.
         ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         // Main simulation loop.
+std::cout << "########################### Starting main simulation loop in SimulatorFullyImplicitBlackoilEbos.hpp :: run\n";
         while (!timer.done()) {
             bool continue_looping = runStep(timer);
             // static int NN=0;
@@ -358,6 +359,8 @@ public:
 
     bool runStep(SimulatorTimer& timer)
     {
+static int istepcount=0;//Razvan
+std::cout <<"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ in SimulatorFullyImplicitBlackoilEbos :: runStep(..) $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ " << istepcount << std::endl;
         if (schedule().exitStatus().has_value()) {
             if (terminalOutput_) {
                 OpmLog::info("Stopping simulation since EXIT was triggered by an action keyword.");
@@ -390,7 +393,7 @@ public:
             ebosSimulator_.setEpisodeLength(0.0);
             ebosSimulator_.setTimeStepSize(0.0);
             wellModel_().beginReportStep(timer.currentStepNum());
-            ebosSimulator_.problem().writeOutput();
+            ebosSimulator_.problem().writeOutput();//NOTE-Razvan: this does not print anything for the first 2 runSteps, probably it does not print ever
 
             report_.success.output_write_time += perfTimer.stop();
         }
@@ -441,16 +444,16 @@ public:
                 events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::INJECTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
-            auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr);
+            auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr);//NOTE-Razvan: this updates the well values
             report_ += stepReport;
-            stepReport.reportFullyImplicit(std::cout);
-            report_.reportFullyImplicit(std::cout);
+//            stepReport.reportFullyImplicit(std::cout);//Razvan remove reporting after eac step
+//            report_.reportFullyImplicit(std::cout);//Razvan remove reporting after eac step
             //std::cout << "SimFI::report.linear_solve_time 2: " << report_.linear_solve_time << "\n";
             //Pass simulation report to eclwriter for summary output
             ebosSimulator_.problem().setSimulationReport(report_);
         } else {
             // solve for complete report step
-            auto stepReport = solver_->step(timer);
+            auto stepReport = solver_->step(timer);//NOTE-Razvan: this updates the well values
             report_ += stepReport;
             if (terminalOutput_) {
                 std::ostringstream ss;
@@ -464,7 +467,7 @@ public:
         perfTimer.start();
         const double nextstep = adaptiveTimeStepping_ ? adaptiveTimeStepping_->suggestedNextStep() : -1.0;
         ebosSimulator_.problem().setNextTimeStepSize(nextstep);
-        ebosSimulator_.problem().writeOutput();
+        ebosSimulator_.problem().writeOutput();//NOTE-Razvan: this prints the 5th point (time:31) of first runStep iteration! and the 7th point (time:59) of the second runStep
         report_.success.output_write_time += perfTimer.stop();
 
         solver_->model().endReportStep();
@@ -474,7 +477,7 @@ public:
 
         // update timing.
         report_.success.solver_time += solverTimer_->secsSinceStart();
-
+        
         if (this->grid().comm().rank() == 0) {
             // Grab the step convergence reports that are new since last we were here.
             const auto& reps = solver_->model().stepReports();
@@ -498,6 +501,10 @@ public:
         }
 
         handleSave(timer);
+
+std::cout <<"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ out SimulatorFullyImplicitBlackoilEbos :: runStep(..) $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ " << istepcount << std::endl;
+if(istepcount == 5){std::cout<<"exit after runStep(..) in SimulatorFullyImplicitBlackoilEbos\n"; exit(0);}//Razvan
+istepcount++;//Razvan
 
         return true;
     }

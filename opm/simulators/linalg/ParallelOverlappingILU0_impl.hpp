@@ -313,7 +313,7 @@ apply (Domain& v, const Range& d)
         OPM_THROW(std::logic_error,"ILU: number of lower and upper rows must be the same");
     }
 
-    Dune::Timer lower_apply;
+//    Dune::Timer lower_apply;//Razvan
     // lower triangular solve
     for (size_type i = 0; i < lowerLoopEnd; ++i)
     {
@@ -328,7 +328,7 @@ apply (Domain& v, const Range& d)
 
         mv[ i ] = rhs;  // Lii = I
     }
-    std::cout << " --------opm-ilu0::lower triangular solve:  " << lower_apply.stop() << " s\n";//Razvan
+//std::cout << " --------opm-ilu0::lower triangular solve:  " << lower_apply.stop() << " s\n";//Razvan
 
     for (size_type i = upperLoopStart; i < iEnd; ++i)
     {

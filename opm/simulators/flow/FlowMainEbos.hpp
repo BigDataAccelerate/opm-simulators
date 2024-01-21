@@ -289,6 +289,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         /// input.
         int execute()
         {
+std::cout << "In FlowMainEbos.hpp :: execute() --> ALSO run multiple times if MPI!!!\n";
             return execute_(&FlowMainEbos::runSimulator, /*cleanup=*/true);
         }
 
@@ -474,6 +475,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         // Run the simulator.
         int runSimulator()
         {
+std::cout << " !!!!!!!!!!!!! in FlowMainEbos.hpp :: runSimulator()  --> do we run it multiple times for MPI? ==> YES\n";
             return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorRunCallback_);
         }
 

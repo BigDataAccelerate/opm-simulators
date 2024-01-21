@@ -684,18 +684,16 @@ namespace Opm
                     WellState& well_state,
                     DeferredLogger& deferred_logger)
     {
+// std::cout <<"-in:  StandardWell :: updateWellState(..)\n";
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
         updatePrimaryVariablesNewton(dwells, stop_or_zero_rate_target, deferred_logger);
-
+// if(summary_state.has_well_var("INJ","WBHP")) std::cout << "summary_state.get(WBHP:INJ) = " << summary_state.get_well_var("INJ","WBHP") << std::endl;//Razvan
         updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
+// std::cout <<"-out: StandardWell :: updateWellState(..)\n";
     }
-
-
-
-
 
     template<typename TypeTag>
     void
@@ -728,12 +726,14 @@ namespace Opm
                                         const SummaryState& summary_state,
                                         DeferredLogger& deferred_logger) const
     {
+// std::cout <<"---in:  StandardWell :: updateWellStateFromPrimaryVariables(..)\n";
         this->StdWellEval::updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
             this->primary_variables_.copyToWellStatePolyMW(well_state);
         }
+// std::cout <<"---out: StandardWell :: updateWellStateFromPrimaryVariables(..)\n";
     }
 
 
@@ -1342,12 +1342,16 @@ namespace Opm
                                           WellState& well_state,
                                           DeferredLogger& deferred_logger)
     {
+std::cout << "     >>>>>>>>>>>>>> in BlackoilWellModel_impl.hpp @ StandardWell<TypeTag>::recoverWellSolutionAndUpdateWellState(..., x, ..) <<<<<<<<<\n";
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         BVectorWell xw(1);
         xw[0].resize(this->primary_variables_.numWellEq());
 
         this->linSys_.recoverSolutionWell(x, xw);
+
+//Razvan-NOTE: xw = dwells, which is propagated to ws.bhp!!!, which are coming from the ACTUAL X SOLUTION!!!!!!!!!
+
         updateWellState(summary_state, xw, well_state, deferred_logger);
     }
 
@@ -1620,7 +1624,9 @@ namespace Opm
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
         const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+// std::cout<<"BEFORE: this->primary_variables_.update(well_state, stop_or_zero_rate_target, deferred_logger);\n";//Razvan
         this->primary_variables_.update(well_state, stop_or_zero_rate_target, deferred_logger);
+// std::cout<<"AFTER:  this->primary_variables_.update(well_state, stop_or_zero_rate_target, deferred_logger);\n";//Razvan
 
         // other primary variables related to polymer injection
         if constexpr (Base::has_polymermw) {
@@ -2327,9 +2333,12 @@ namespace Opm
     setPrimaryVars(std::vector<double>::const_iterator it)
     {
         const int num_pri_vars = this->primary_variables_.numWellEq();
+std::cout<<"-in: StandardWell::setPrimaryVars() ; num_pri_vars = " << num_pri_vars << "\n";
         for (int ii = 0; ii < num_pri_vars; ++ii) {
+std::cout << "    setting value " << it[ii] << " to variable " << ii << std::endl;
             this->primary_variables_.setValue(ii, it[ii]);
         }
+std::cout << " ...exiting\n";exit(0);
         return num_pri_vars;
     }
 

@@ -434,11 +434,14 @@ public:
             drift_ = 0.0;
         }
 
+std::cout << " In eclprolem.hh :: finishInit()\n";
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
         if (enableEclOutput_) {
             if (simulator.vanguard().grid().comm().size() > 1) {
-                if (simulator.vanguard().grid().comm().rank() == 0)
+                if (simulator.vanguard().grid().comm().rank() == 0){
+std::cout << "        ---------------- output only with rank 0!!!!!!!!\n";                    
                     eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
+                }
             } else
                 eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
 
@@ -513,6 +516,7 @@ public:
      */
     void beginEpisode()
     {
+std::cout << " -------------- in eclproblem :: beginEpisode() \n";//Razvan
         OPM_TIMEBLOCK(beginEpisode);
         // Proceed to the next report step
         auto& simulator = this->simulator();
@@ -674,7 +678,7 @@ public:
         }
         }
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
-        eclWriter_->evalSummaryState(isSubStep);
+        eclWriter_->evalSummaryState(isSubStep);//NOTE-Razvan: this updates the well values
 
         int episodeIdx = this->episodeIndex();
 
@@ -734,11 +738,14 @@ public:
      */
     void writeOutput(bool verbose = true)
     {
+// std::cout << "-in:  eclproblem.hh :: writeOutput(..)  : this->simulator().episodeWillBeOver() = " << this->simulator().episodeWillBeOver() << std::endl;
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) || this->simulator().episodeWillBeOver()){
-            ParentType::writeOutput(verbose);
+// std::cout << "---before: ParentType::writeOutput(verbose);\n";  
+           ParentType::writeOutput(verbose);
+// std::cout << "---after : ParentType::writeOutput(verbose);\n";  
         }
 
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
@@ -748,14 +755,17 @@ public:
         // N.B. the Damaris output has to be done before the ECL output as the ECL one 
         // does all kinds of std::move() relocation of data
         if (enableDamarisOutput_) {
+// std::cout << "---before: damarisWriter_->writeOutput(localCellData, isSubStep);\n";
             damarisWriter_->writeOutput(localCellData, isSubStep) ;
+// std::cout << "---after:  damarisWriter_->writeOutput(localCellData, isSubStep);\n";
         }
 #endif 
         if (enableEclOutput_){
-            eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+// std::cout << "---before: eclWriter_->writeOutput(std::move(localCellData), isSubStep);\n";
+            eclWriter_->writeOutput(std::move(localCellData), isSubStep);//NOTE-Razvan: this writes the output!!!!
+// std::cout << "---after:  eclWriter_->writeOutput(std::move(localCellData), isSubStep);\n";
         }
-        
-
+// std::cout << "-out: eclproblem.hh :: writeOutput(..)\n";
     }
 
     void finalizeOutput() {
