@@ -44,10 +44,6 @@
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_version.h>
 
-#include <hip/hip_version.h>
-
-#include <hip/hip_version.h>
-
 #ifdef HIP_HAVE_CUDA_DEFINED
 #define HAVE_CUDA HIP_HAVE_CUDA_DEFINED
 #undef HIP_HAVE_CUDA_DEFINED
