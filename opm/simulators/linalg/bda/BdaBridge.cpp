@@ -47,8 +47,10 @@
 #endif
 
 #if HAVE_ROCSPARSE
-#include <opm/simulators/linalg/bda/rocsparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp>
 #endif
+
+#include <opm/simulators/linalg/bda/c/cSolverBackend.hpp>
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
@@ -105,10 +107,13 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 #else
         OPM_THROW(std::logic_error, "Error rocsparseSolver was chosen, but rocsparse/rocblas was not found by CMake");
 #endif
+    } else if (accelerator_mode.compare("c") == 0) {
+        use_gpu = true;
+        backend.reset(new Opm::Accelerator::cSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_parallel, linsolver));
     } else if (accelerator_mode.compare("none") == 0) {
         use_gpu = false;
     } else {
-        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]");
+        OPM_THROW(std::logic_error, "Error unknown value for parameter 'AcceleratorMode', should be passed like '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse|c]");
     }
 }
 
