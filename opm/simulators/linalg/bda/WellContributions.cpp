@@ -79,6 +79,12 @@ WellContributions::create(const std::string& accelerator_mode, bool useWellConn)
         }
         return std::make_unique<WellContributions>();
     }
+    else if(accelerator_mode.compare("c") == 0){
+        if (!useWellConn) {
+            OPM_THROW(std::logic_error, "Error C requires --matrix-add-well-contributions=true");
+        }
+        return std::make_unique<WellContributions>();
+    }
     else{
         OPM_THROW(std::logic_error, "Invalid accelerator mode");
     }

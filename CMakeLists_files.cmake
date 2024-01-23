@@ -202,7 +202,8 @@ if(USE_BDA_BRIDGE)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp
                                  opm/simulators/linalg/bda/WellContributions.cpp
                                  opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
-                                 opm/simulators/linalg/ISTLSolverEbosBda.cpp)
+                                 opm/simulators/linalg/ISTLSolverEbosBda.cpp
+                                 opm/simulators/linalg/bda/c/cSolverBackend.cpp)
   if(OPENCL_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/BILU0.cpp)
@@ -218,12 +219,12 @@ if(USE_BDA_BRIDGE)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclWellContributions.cpp)
   endif()
   if(ROCALUTION_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocalutionSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.cpp)
   endif()
-  if(rocsparse_FOUND AND rocblas_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocsparseSolverBackend.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocsparseWellContributions.cpp)
-  endif()
+ if(rocsparse_FOUND AND rocblas_FOUND)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseWellContributions.cpp)
+ endif()
   if(CUDA_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cusparseSolverBackend.cu)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cuWellContributions.cu)
@@ -488,9 +489,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/opencl/openclWellContributions.hpp
   opm/simulators/linalg/bda/Matrix.hpp
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
-  opm/simulators/linalg/bda/rocalutionSolverBackend.hpp
-  opm/simulators/linalg/bda/rocsparseSolverBackend.hpp
-  opm/simulators/linalg/bda/rocsparseWellContributions.hpp
+  opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.hpp
+  opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp
+  opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp
+  opm/simulators/linalg/bda/c/cSolverBackend.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/DILU.hpp
