@@ -487,6 +487,7 @@ std::cout << "######## calling umfpack.apply(h_x.data(), h_y.data()); for coarse
             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
             OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
         }
+std::cout << "-------out: amg_cycle_gpu(..)--> for level " << level+1 << "/" << num_levels << "  // from CPR.cpp\n";//Razvan
         return;
     }
     int Nnext = d_Amatrices[level+1].Nb;

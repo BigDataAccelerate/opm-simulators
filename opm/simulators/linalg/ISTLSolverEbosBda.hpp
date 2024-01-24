@@ -180,6 +180,9 @@ public:
 
     void prepare(const Matrix& M, Vector& b)
     {
+        const auto& grid = this->simulator_.gridView();
+        const auto& comm = grid.comm();
+
         OPM_TIMEBLOCK(prepare);
         [[maybe_unused]] const bool firstcall = (this->matrix_ == nullptr);
 
@@ -205,7 +208,7 @@ public:
                                this->simulator_.vanguard().schedule().getWellsatEnd(),
                                this->simulator_.vanguard().cellPartition(),
                                this->getMatrix().nonzeroes(), this->useWellConn_);
-            std::cout << "ISTLSolverEbosBDA::prepare jacobi time (opencl): " << t_jacobi.stop() << "\n";
+            std::cout << "rank_" << comm.rank() << ": ISTLSolverEbosBDA::prepare jacobi time (opencl): " << t_jacobi.stop() << "\n";
         }
 #endif
     }
@@ -228,6 +231,9 @@ public:
 
     bool solve(Vector& x)
     {
+        const auto& grid = this->simulator_.gridView();
+        const auto& comm = grid.comm();
+        
         if (!bdaBridge_) {
             return ParentType::solve(x);
         }
@@ -255,7 +261,7 @@ public:
             };
         static double t_wells = 0.0;
         t_wells += t3.stop();
-        std::cout << "ISTLSolverEbosBDA::solve cum getWells time: " << t_wells << "(+" << t3.elapsed() << ")\n";
+        std::cout << "rank_" << comm.rank() << ": ISTLSolverEbosBDA::solve cum getWells time: " << t_wells << "(+" << t3.elapsed() << ")\n";
         
         Dune::Timer t1;
         static double t_total = 0.0;
@@ -274,18 +280,18 @@ public:
             assert(this->flexibleSolver_[this->activeSolverNum_].solver_);
             this->flexibleSolver_[this->activeSolverNum_].solver_->apply(x, *(this->rhs_), result);
             t_fallback += t5.stop();
-            std::cout << "ISTLSolverEbosBDA::solve cum fallback time: " << t_fallback << "(+" << t5.elapsed() << ")\n";
+            std::cout << "rank_" << comm.rank() << ": ISTLSolverEbosBDA::solve cum fallback time: " << t_fallback << "(+" << t5.elapsed() << ")\n";
         }
         t_total += t1.stop();
-        std::cout << "ISTLSolverEbosBDA::solve cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
+        std::cout << "rank_" << comm.rank() << ": ISTLSolverEbosBDA::solve cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
 
         // Check convergence, iterations etc.
         Dune::Timer t2;
         static double t_conv = 0.0;
         this->checkConvergence(result);
         t_conv += t2.stop();
-        std::cout << "ISTLSolverEbosBDA::solve cum conv time: " << t_conv << "(+" << t2.elapsed() << ")\n";
-        std::cout << "ISTLSolverEbosBDA::solve cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
+        std::cout << "rank_" << comm.rank() << ": ISTLSolverEbosBDA::solve cum conv time: " << t_conv << "(+" << t2.elapsed() << ")\n";
+        std::cout << "rank_" << comm.rank() << ": ISTLSolverEbosBDA::solve cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
 
         return this->converged_;
     }

@@ -328,7 +328,7 @@ apply (Domain& v, const Range& d)
 
         mv[ i ] = rhs;  // Lii = I
     }
-    std::cout << " --------opm-ilu0::lower triangular solve:  " << lower_apply.stop() << " s\n";//Razvan
+    std::cout << " rank_" << comm_->communicator().rank() << "--------opm-ilu0::lower triangular solve:  " << lower_apply.stop() << " s\n";//Razvan
 
     for (size_type i = upperLoopStart; i < iEnd; ++i)
     {

@@ -167,21 +167,21 @@ public:
   {
 // std::cout <<"--in : WellModelMatrixAdapter::apply(..); //in OPM -> WellOperators.hpp\n"; 
     OPM_TIMEBLOCK(apply);
-//     Dune::Timer t1;//Razvan
-//     static double tt1 = 0.0;//Razvan
+    Dune::Timer t1;//Razvan
+    static double tt1 = 0.0;//Razvan
 // std::cout <<"--before: A_.mv( x, y );\n"; 
     A_.mv( x, y );
-//     tt1 += t1.stop();//Razvan
+    tt1 += t1.stop();//Razvan
 // std::cout <<"--after : A_.mv( x, y );\n"; 
-//     std::cout << "WellModelMatrixAdapter::apply cum spmv: " << tt1 << "(+" << t1.elapsed() << ")\n";//Razvan
+    std::cout << "WellModelMatrixAdapter::apply cum spmv: " << tt1 << "(+" << t1.elapsed() << ")\n";//Razvan
 // std::cout <<"--before: wellOper_.apply(x, y ); //in OPM -> WellOperators.hpp\n"; 
 
     // add well model modification to y
-//     Dune::Timer t2;//Razvan
-//     static double tt2 = 0.0;//Razvan
+    Dune::Timer t2;//Razvan
+    static double tt2 = 0.0;//Razvan
     wellOper_.apply(x, y );
-//     tt2 += t2.stop();//Razvan
-//     std::cout << "WellModelMatrixAdapter::apply cum well: " << tt2 << "(+" << t2.elapsed() << ")\n";//Razvan
+    tt2 += t2.stop();//Razvan
+    std::cout << "WellModelMatrixAdapter::apply cum well: " << tt2 << "(+" << t2.elapsed() << ")\n";//Razvan
 // std::cout <<"--after : wellOper_.apply(x, y ); //in OPM -> WellOperators.hpp\n"; 
 
 #if HAVE_MPI

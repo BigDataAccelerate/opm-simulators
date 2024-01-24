@@ -35,6 +35,8 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <memory>
 
+#include <mpi.h>//Razvan
+
 namespace Opm::Properties {
 
 namespace TTag {
@@ -195,6 +197,9 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
         SimulatorReportSingle step(const SimulatorTimerInterface& timer)
         {
+int rank;
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      
             SimulatorReportSingle report;
             report.global_time = timer.simulationTimeElapsed();
             report.timestep_length = timer.currentStepLength();
@@ -203,7 +208,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
             report += model_->prepareStep(timer);
 
             int iteration = 0;
-std::cout << "  in NonlinearSolver.hpp -> NonlinearSolver::step \n";//Razvan
+std::cout << "  in NonlinearSolver.hpp -> NonlinearSolver::step (rank_" << rank << "\n";//Razvan
             // Let the model do one nonlinear iteration.
 
             // Set up for main solver loop.
@@ -218,7 +223,7 @@ std::cout << "  in NonlinearSolver.hpp -> NonlinearSolver::step \n";//Razvan
                     static double t_total = 0.0;
                     auto iterReport = model_->nonlinearIteration(iteration, timer, *this);
                     t_total += iterReport.linear_solve_time;
-                    std::cout << "NonlinearSolver::step() success cum time: " << t_total << "(+" << iterReport.linear_solve_time << ")\n";
+                    std::cout << "NonlinearSolver::step() success cum time: " << t_total << "(+" << iterReport.linear_solve_time << ")(rank_" << rank << "\n";
                     iterReport.global_time = timer.simulationTimeElapsed();
                     report += iterReport;
                     report.converged = iterReport.converged;
@@ -233,7 +238,7 @@ std::cout << "  in NonlinearSolver.hpp -> NonlinearSolver::step \n";//Razvan
                     failureReport_ += model_->failureReport();
                     static double t_fail = 0.0;
                     t_fail += failureReport_.linear_solve_time;
-                    std::cout << "NonlinearSolver::step() fail cum time: " << t_fail << "(+" << failureReport_.linear_solve_time << ")\n";
+                    std::cout << "NonlinearSolver::step() fail cum time: " << t_fail << "(+" << failureReport_.linear_solve_time << ")(rank_" << rank << "\n";
                     throw;
                 }
             }

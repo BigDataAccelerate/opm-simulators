@@ -189,7 +189,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
               parameters_{parameters},
               forceSerial_(forceSerial)
         {
-std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//Razvan
+// std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//Razvan
             initialize();
         }
 
@@ -348,6 +348,9 @@ std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//R
 
         void prepare(const Matrix& M, Vector& b)
         {
+            const auto& grid = this->simulator_.gridView();
+            const auto& comm = grid.comm();
+            
             OPM_TIMEBLOCK(istlSolverEbosPrepare);
             Dune::Timer t1;
             static double t_total = 0.0;
@@ -356,7 +359,7 @@ std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//R
 
             prepareFlexibleSolver();
             t_total += t1.stop();
-            std::cout << "ISTLSolverEbos::prepare cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
+            std::cout << "rank_" << comm.rank() << ": ISTLSolverEbos::prepare cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
         }
 
 
@@ -385,6 +388,9 @@ std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//R
 
         bool solve(Vector& x)
         {
+            const auto& grid = this->simulator_.gridView();
+            const auto& comm = grid.comm();
+        
             OPM_TIMEBLOCK(istlSolverEbosSolve);
             ++solveCount_;
             Dune::Timer t;
@@ -414,8 +420,8 @@ std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//R
 
             t_conv += t2.stop();
             t_total += t.stop();
-            std::cout << "ISTLSolverEbos::solve cum conv time: " << t_conv << "(+" << t2.elapsed() << ")\n";
-            std::cout << "ISTLSolverEbos::solve cum total time: " << t_total << "(+" << t.elapsed() << ")\n";
+            std::cout << "rank_" << comm.rank() << ": ISTLSolverEbos::solve cum conv time: " << t_conv << "(+" << t2.elapsed() << ")\n";
+            std::cout << "rank_" << comm.rank() << ": ISTLSolverEbos::solve cum total time: " << t_total << "(+" << t.elapsed() << ")\n";
             return converged_;
         }
 
@@ -471,7 +477,7 @@ std::cout << " in ISTLSolverEbos::CONSTRUCTOR before calling initialize()\n";//R
 
         void prepareFlexibleSolver()
         {
-std::cout << "in ISTLSolverEbos.hpp::prepareFlexibleSolver()\n";//Razvan
+// std::cout << "in ISTLSolverEbos.hpp::prepareFlexibleSolver()\n";//Razvan
             OPM_TIMEBLOCK(flexibleSolverPrepare);
             if (shouldCreateSolver()) {
                 if (!useWellConn_) {
