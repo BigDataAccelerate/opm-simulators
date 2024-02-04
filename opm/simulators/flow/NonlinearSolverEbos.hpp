@@ -199,6 +199,8 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
             report.global_time = timer.simulationTimeElapsed();
             report.timestep_length = timer.currentStepLength();
 
+static int stepCounter = 0;
+
             // Do model-specific once-per-step calculations.
             report += model_->prepareStep(timer);
 
@@ -243,6 +245,9 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
             // Do model-specific post-step actions.
             report += model_->afterStep(timer);
             report.converged = true;
+
+if(stepCounter == 3) {std::cout << "exiting after the " << stepCounter+1 << " step.....\n";exit(0);}
+stepCounter++;
             return report;
         }
 

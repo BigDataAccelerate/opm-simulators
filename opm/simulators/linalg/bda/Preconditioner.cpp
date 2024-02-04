@@ -22,22 +22,12 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
-#include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
-#include <opm/simulators/linalg/bda/opencl/CPR.hpp>
-#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+#include <opm/simulators/linalg/bda/Preconditioner.hpp>
 
 namespace Opm
 {
 namespace Accelerator
 {
-
-
-template <unsigned int block_size>
-void Preconditioner<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
-    context = context_;
-    queue = queue_;
-}
 
 template <unsigned int block_size>
 std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel) {

@@ -203,6 +203,7 @@ if(USE_BDA_BRIDGE)
                                  opm/simulators/linalg/bda/WellContributions.cpp
                                  opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
                                  opm/simulators/linalg/ISTLSolverEbosBda.cpp
+                                 opm/simulators/linalg/bda/c/cPreconditioner.cpp
                                  opm/simulators/linalg/bda/c/cSolverBackend.cpp)
   if(OPENCL_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
@@ -214,7 +215,7 @@ if(USE_BDA_BRIDGE)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/opencl.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclKernels.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/OpenclMatrix.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/Preconditioner.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclPreconditioner.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclSolverBackend.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclWellContributions.cpp)
   endif()
@@ -473,6 +474,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/BdaBridge.hpp
   opm/simulators/linalg/bda/BdaResult.hpp
   opm/simulators/linalg/bda/BdaSolver.hpp
+  opm/simulators/linalg/bda/Matrix.hpp
+  opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
+  opm/simulators/linalg/bda/Preconditioner.hpp
+  opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/bda/opencl/BILU0.hpp
   opm/simulators/linalg/bda/BlockedMatrix.hpp
   opm/simulators/linalg/bda/opencl/CPR.hpp
@@ -481,19 +486,17 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
   opm/simulators/linalg/bda/opencl/BISAI.hpp
   opm/simulators/linalg/bda/Reorder.hpp
+  opm/simulators/linalg/bda/c/cPreconditioner.hpp
+  opm/simulators/linalg/bda/c/cSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/opencl.hpp
   opm/simulators/linalg/bda/opencl/openclKernels.hpp
   opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp
-  opm/simulators/linalg/bda/opencl/Preconditioner.hpp
+  opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp
   opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/openclWellContributions.hpp
-  opm/simulators/linalg/bda/Matrix.hpp
-  opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.hpp
   opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp
   opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp
-  opm/simulators/linalg/bda/c/cSolverBackend.hpp
-  opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/DILU.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh

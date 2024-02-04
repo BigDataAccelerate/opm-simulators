@@ -622,6 +622,8 @@ namespace Opm {
         /// r is the residual.
         void solveJacobianSystem(BVector& x)
         {
+static int solveJacobCount = 0;
+std::cout << "########################### IN : solveJacobianSystem(x) ################## " << solveJacobCount << std::endl;
 
             auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
@@ -680,6 +682,8 @@ namespace Opm {
                 // consistent, this is not relevant for OPM-flow...
                 ebosSolver.solve(x);
             }
+std::cout << "########################### OUT: solveJacobianSystem(x) ################## " << solveJacobCount++ << std::endl;
+if(solveJacobCount == 1) {std::cout << "exiting after first solveJacobianSystem.... \n";exit(0);}
        }
 
 
