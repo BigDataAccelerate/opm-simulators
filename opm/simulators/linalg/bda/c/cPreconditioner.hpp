@@ -52,18 +52,18 @@ public:
         BISAI
     };
 
-    static std::unique_ptr<cCPR> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
+    static std::unique_ptr<cPreconditioner> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
 
-//     virtual ~cPreconditioner() = default;
+    virtual ~cPreconditioner() = default;
 
     // apply preconditioner, x = prec(y)
-//     virtual void apply(const cl::Buffer& y, cl::Buffer& x) = 0;
+    virtual void apply(double& y, double& x) = 0;
 
     // analyze matrix, e.g. the sparsity pattern
     // probably only called once
     // the version with two params can be overloaded, if not, it will default to using the one param version
-//     virtual bool analyze_matrix(BlockedMatrix *mat) = 0;
-//     virtual bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
+    virtual bool analyze_matrix(BlockedMatrix *mat) = 0;
+    virtual bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
 
     // create/update preconditioner, probably used every linear solve
     // the version with two params can be overloaded, if not, it will default to using the one param version

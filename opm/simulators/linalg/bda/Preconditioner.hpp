@@ -28,7 +28,11 @@ namespace Opm
 {
 namespace Accelerator
 {
-
+    enum PreconditionerType {
+        BILU0,
+        CPR,
+        BISAI
+    };
 
 class BlockedMatrix;
 
@@ -48,14 +52,6 @@ protected:
     {};
 
 public:
-    enum PreconditionerType {
-        BILU0,
-        CPR,
-        BISAI
-    };
-
-    static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
-
     virtual ~Preconditioner() = default;
 
 #if HAVE_OPENCL
@@ -69,12 +65,12 @@ public:
     // probably only called once
     // the version with two params can be overloaded, if not, it will default to using the one param version
     virtual bool analyze_matrix(BlockedMatrix *mat) = 0;
-    virtual bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
+    virtual bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) = 0;
 
     // create/update preconditioner, probably used every linear solve
     // the version with two params can be overloaded, if not, it will default to using the one param version
     virtual bool create_preconditioner(BlockedMatrix *mat) = 0;
-    virtual bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat);
+    virtual bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) = 0;
 };
 
 } //namespace Accelerator

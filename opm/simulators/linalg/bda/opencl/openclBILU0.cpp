@@ -24,12 +24,14 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp> 
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
 #include <sstream>
+
+#include <iostream> //Razvan
 
 namespace Opm
 {
@@ -40,9 +42,11 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_) :
-    Preconditioner<block_size>(verbosity_), opencl_ilu_parallel(opencl_ilu_parallel_)
+openclBILU0<block_size>::openclBILU0(bool opencl_ilu_parallel_, int verbosity_) : 
+    openclPreconditioner<block_size>(verbosity_)
 {
+//     this->verbosity = verbosity_;
+    opencl_ilu_parallel = opencl_ilu_parallel_;
 #if CHOW_PATEL
     chowPatelIlu.setVerbosity(verbosity);
 #endif
@@ -50,15 +54,17 @@ BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_) :
 
 
 template <unsigned int block_size>
-bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
+bool openclBILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
 {
+// std::cout << "-----in : openclBILU0<block_size>::analyze_matrix(BlockedMatrix *mat_) --> call analyze_matrix(mat, nullptr) \n";
     return analyze_matrix(mat, nullptr);
 }
 
 
 template <unsigned int block_size>
-bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool openclBILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
 {
+// std::cout << "-----in : openclBILU0<block_size>::analyze_matrix(mat_, jacMat) \n";
     const unsigned int bs = block_size;
 
     this->N = mat->Nb * block_size;
@@ -83,7 +89,7 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
         csrPatternToCsc(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb);
         if(verbosity >= 3){
             std::ostringstream out;
-            out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
+            out << "openclBILU0 convert CSR to CSC: " << t_convert.stop() << " s";
             OpmLog::info(out.str());
         }
     } else {
@@ -106,11 +112,11 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     }
 
     if (verbosity >= 1) {
-        out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
+        out << "openclBILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
     }
 
 #if CHOW_PATEL
-    out << "BILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
+    out << "openclBILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
 #endif
     OpmLog::info(out.str());
 
@@ -121,11 +127,12 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     Lmat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
     Umat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
 #endif
-
+    
     s.invDiagVals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * mat->Nb);
     s.rowsPerColor = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (numColors + 1));
     s.diagIndex = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * LUmat->Nb);
     s.rowIndices = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned) * LUmat->Nb);
+
 #if CHOW_PATEL
     s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
     s.Lcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Lmat->nnzbs);
@@ -162,7 +169,7 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     events.clear();
     if (err != CL_SUCCESS) {
         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-        OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
+        OPM_THROW(std::logic_error, "openclBILU0 OpenCL enqueueWriteBuffer error");
     }
 
     return true;
@@ -171,14 +178,14 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
 
 
 template <unsigned int block_size>
-bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
+bool openclBILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
 {
     return create_preconditioner(mat, nullptr);
 }
 
 
 template <unsigned int block_size>
-bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool openclBILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
 {
     const unsigned int bs = block_size;
 
@@ -190,7 +197,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     if (verbosity >= 3){
         std::ostringstream out;
-        out << "BILU0 memcpy: " << t_copy.stop() << " s";
+        out << "openclBILU0 memcpy: " << t_copy.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -227,12 +234,12 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
     events.clear();
     if (err != CL_SUCCESS) {
         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-        OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
+        OPM_THROW(std::logic_error, "openclBILU0 OpenCL enqueueWriteBuffer error");
     }
 
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "BILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
+        out << "openclBILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -251,7 +258,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     if (verbosity >= 3) {
         queue->finish();
-        out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
+        out << "openclBILU0 decomposition: " << t_decomposition.stop() << " s";
         OpmLog::info(out.str());
     }
 #endif // CHOW_PATEL
@@ -264,7 +271,7 @@ bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 // however, if individual kernel calls are timed, waiting for events is needed
 // behavior on other GPUs is untested
 template <unsigned int block_size>
-void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
+void openclBILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 {
     const double relaxation = 0.9;
     cl::Event event;
@@ -299,16 +306,17 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "BILU0 apply: " << t_apply.stop() << " s";
+        out << "openclBILU0 apply: " << t_apply.stop() << " s";
         OpmLog::info(out.str());
     }
 }
 
-
-
+// template openclBILU0<n>::openclBILU0(bool, int);\ 
+// template bool openclBILU0<n>::analyze_matrix(BlockedMatrix *, BlockedMatrix *);\                           
+// template bool openclBILU0<n>::create_preconditioner(BlockedMatrix *);\
+// template bool openclBILU0<n>::create_preconditioner(BlockedMatrix *, BlockedMatrix *);
 #define INSTANTIATE_BDA_FUNCTIONS(n) \
-template class BILU0<n>;
-
+template class openclBILU0<n>;
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

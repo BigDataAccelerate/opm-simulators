@@ -26,11 +26,11 @@
 
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
-#include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBISAI.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
-#include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp> // disable BISAI if ChowPatel is selected
+#include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp> // disable openclBISAI if ChowPatel is selected
 
 #include <sstream>
 
@@ -43,17 +43,17 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-BISAI<block_size>::BISAI(bool opencl_ilu_parallel_, int verbosity_) :
-    Preconditioner<block_size>(verbosity_)
+openclBISAI<block_size>::openclBISAI(bool opencl_ilu_parallel_, int verbosity_) :
+    openclPreconditioner<block_size>(verbosity_)
 {
 #if CHOW_PATEL
     OPM_THROW(std::logic_error, "Error --linear-solver=isai cannot be used if ChowPatelIlu is used, probably defined by CMake\n");
 #endif
-    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_parallel_, verbosity_);
+    bilu0 = std::make_unique<openclBILU0<block_size>>(opencl_ilu_parallel_, verbosity_);
 }
 
 template <unsigned int block_size>
-void BISAI<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_)
+void openclBISAI<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_)
 {
     context = context_;
     queue = queue_;
@@ -78,13 +78,13 @@ std::vector<int> buildCsrToCscOffsetMap(std::vector<int> colPointers, std::vecto
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat)
+bool openclBISAI<block_size>::analyze_matrix(BlockedMatrix *mat)
 {
     return analyze_matrix(mat, nullptr);
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool openclBISAI<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
 {
     const unsigned int bs = block_size;
     auto *m = mat;
@@ -106,7 +106,7 @@ bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
 }
 
 template <unsigned int block_size>
-void BISAI<block_size>::buildLowerSubsystemsStructures(){
+void openclBISAI<block_size>::buildLowerSubsystemsStructures(){
     lower.subsystemPointers.assign(Nb + 1, 0);
 
     Dune::Timer t_buildLowerSubsystemsStructures;
@@ -135,13 +135,13 @@ void BISAI<block_size>::buildLowerSubsystemsStructures(){
 
     if(verbosity >= 4){
         std::ostringstream out;
-        out << "BISAI buildLowerSubsystemsStructures time: " << t_buildLowerSubsystemsStructures.stop() << " s";
+        out << "openclBISAI buildLowerSubsystemsStructures time: " << t_buildLowerSubsystemsStructures.stop() << " s";
         OpmLog::info(out.str());
     }
 }
 
 template <unsigned int block_size>
-void BISAI<block_size>::buildUpperSubsystemsStructures(){
+void openclBISAI<block_size>::buildUpperSubsystemsStructures(){
     upper.subsystemPointers.assign(Nb + 1, 0);
 
     Dune::Timer t_buildUpperSubsystemsStructures;
@@ -170,13 +170,13 @@ void BISAI<block_size>::buildUpperSubsystemsStructures(){
 
     if(verbosity >= 4){
         std::ostringstream out;
-        out << "BISAI buildUpperSubsystemsStructures time: " << t_buildUpperSubsystemsStructures.stop() << " s";
+        out << "openclBISAI buildUpperSubsystemsStructures time: " << t_buildUpperSubsystemsStructures.stop() << " s";
         OpmLog::info(out.str());
     }
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool openclBISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
 {
     const unsigned int bs = block_size;
 
@@ -248,7 +248,7 @@ bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
         if (err != CL_SUCCESS) {
             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-            OPM_THROW(std::logic_error, "BISAI OpenCL enqueueWriteBuffer error");
+            OPM_THROW(std::logic_error, "openclBISAI OpenCL enqueueWriteBuffer error");
         }
     });
 
@@ -266,7 +266,7 @@ bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 
     if(verbosity >= 4){
         std::ostringstream out;
-        out << "BISAI createPreconditioner time: " << t_preconditioner.stop() << " s";
+        out << "openclBISAI createPreconditioner time: " << t_preconditioner.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -274,13 +274,13 @@ bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat)
+bool openclBISAI<block_size>::create_preconditioner(BlockedMatrix *mat)
 {
     return create_preconditioner(mat, nullptr);
 }
 
 template <unsigned int block_size>
-void BISAI<block_size>::apply(const cl::Buffer& x, cl::Buffer& y){
+void openclBISAI<block_size>::apply(const cl::Buffer& x, cl::Buffer& y){
     const unsigned int bs = block_size;
 
     OpenclKernels::spmv(d_invLvals, d_rowIndices, d_colPointers, x, d_invL_x, Nb, bs, true, true); // application of isaiL is a simple spmv with addition
@@ -290,7 +290,7 @@ void BISAI<block_size>::apply(const cl::Buffer& x, cl::Buffer& y){
 }
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template class BISAI<n>;
+template class openclBISAI<n>;
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

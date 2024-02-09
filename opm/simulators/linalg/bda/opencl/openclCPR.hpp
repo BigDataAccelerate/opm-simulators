@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_CPR_HPP
-#define OPM_CPR_HPP
+#ifndef OPM_OPENCLCPR_HPP
+#define OPM_OPENCLCPR_HPP
 
 #include <mutex>
 
@@ -26,10 +26,10 @@
 #include <dune/istl/umfpack.hh>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
-#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
 
@@ -42,9 +42,9 @@ class BlockedMatrix;
 
 /// This class implements a Constrained Pressure Residual (CPR) preconditioner
 template <unsigned int block_size>
-class CPR : public Preconditioner<block_size>
+class openclCPR : public openclPreconditioner<block_size>
 {
-    typedef Preconditioner<block_size> Base;
+    typedef openclPreconditioner<block_size> Base;
 
     using Base::N;
     using Base::Nb;
@@ -72,7 +72,7 @@ private:
     std::unique_ptr<cl::Buffer> d_coarse_y, d_coarse_x; // stores the scalar vectors
     std::once_flag opencl_buffers_allocated;  // only allocate OpenCL Buffers once
 
-    std::unique_ptr<BILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
+    std::unique_ptr<openclBILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
     BlockedMatrix *mat = nullptr;    // input matrix, blocked
 
     using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1> >;
@@ -116,20 +116,21 @@ private:
 
 public:
 
-    CPR(int verbosity, bool opencl_ilu_parallel);
+    openclCPR(int verbosity, bool opencl_ilu_parallel);
 
-    bool analyze_matrix(BlockedMatrix *mat) override;
-    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool analyze_matrix(BlockedMatrix *mat);
+    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
 
     // set own Opencl variables, but also that of the bilu0 preconditioner
     void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
 
+    bool create_preconditioner(BlockedMatrix *mat);
+    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat);
+    
     // applies blocked ilu0
     // also applies amg for pressure component
-    void apply(const cl::Buffer& y, cl::Buffer& x) override;
-
-    bool create_preconditioner(BlockedMatrix *mat) override;
-    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    void apply(const cl::Buffer& y, cl::Buffer& x);
+    void apply(double& y, double& x) {}
 };
 
 // solve A^T * x = b

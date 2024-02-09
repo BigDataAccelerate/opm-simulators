@@ -30,7 +30,7 @@
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
-#include <opm/simulators/linalg/bda/opencl/CPR.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclCPR.hpp>
 #include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 
@@ -44,16 +44,17 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-CPR<block_size>::CPR(int verbosity_, bool opencl_ilu_parallel_) :
-    Preconditioner<block_size>(verbosity_), opencl_ilu_parallel(opencl_ilu_parallel_)
+openclCPR<block_size>::openclCPR(int verbosity_, bool opencl_ilu_parallel_) :
+    openclPreconditioner<block_size>(verbosity_)
 {
-    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity_);
+    opencl_ilu_parallel = opencl_ilu_parallel_;
+    bilu0 = std::make_unique<openclBILU0<block_size> >(opencl_ilu_parallel, verbosity_);
     diagIndices.resize(1);
 }
 
 
 template <unsigned int block_size>
-void CPR<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
+void openclCPR<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
 
     context = context_;
     queue = queue_;
@@ -63,38 +64,43 @@ void CPR<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::sha
 
 
 template <unsigned int block_size>
-bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
-
+bool openclCPR<block_size>::analyze_matrix(BlockedMatrix *mat_) 
+{
+// std::cout << "-----in : openclCPR<block_size>::analyze_matrix(BlockedMatrix *mat_) \n";
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
     this->N = Nb * block_size;
     this->nnz = nnzb * block_size * block_size;
 
     bool success = bilu0->analyze_matrix(mat_);
+// std::cout << " after bilu0->analyze_matrix(mat_); in openclCPR::analyze_matrix(..) -- 1 \n";
     mat = mat_;
     return success;
 }
 
 template <unsigned int block_size>
-bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+bool openclCPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) 
+{
+// std::cout << "-----in : openclCPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) \n";
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
     this->N = Nb * block_size;
     this->nnz = nnzb * block_size * block_size;
 
     bool success = bilu0->analyze_matrix(mat_, jacMat);
+// std::cout << " after bilu0->analyze_matrix(mat_); in openclCPR::analyze_matrix(..) -- 2 \n";
     mat = mat_;
 
     return success;
 }
 
 template <unsigned int block_size>
-bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+bool openclCPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_, jacMat);
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "CPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        out << "openclCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -102,19 +108,19 @@ bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *
     create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "CPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        out << "openclCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
     return result;
 }
 
 template <unsigned int block_size>
-bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
+bool openclCPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_);
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "CPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        out << "openclCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -122,7 +128,7 @@ bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "CPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        out << "openclCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
     return result;
@@ -164,7 +170,7 @@ void solve_transposed_3x3(const double *A, const double *b, double *x) {
 
 
 template <unsigned int block_size>
-void CPR<block_size>::init_opencl_buffers() {
+void openclCPR<block_size>::init_opencl_buffers() {
     d_Amatrices.reserve(num_levels);
     d_Rmatrices.reserve(num_levels - 1);
     d_invDiags.reserve(num_levels - 1);
@@ -189,7 +195,7 @@ void CPR<block_size>::init_opencl_buffers() {
 
 
 template <unsigned int block_size>
-void CPR<block_size>::opencl_upload() {
+void openclCPR<block_size>::opencl_upload() {
     d_mat->upload(queue.get(), mat);
 
     err = CL_SUCCESS;
@@ -205,7 +211,7 @@ void CPR<block_size>::opencl_upload() {
     events.clear();
     if (err != CL_SUCCESS) {
         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-        OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
+        OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueWriteBuffer error");
     }
     for (unsigned int i = 0; i < Rmatrices.size(); ++i) {
         d_Rmatrices[i].upload(queue.get(), &Rmatrices[i]);
@@ -214,7 +220,7 @@ void CPR<block_size>::opencl_upload() {
 
 
 template <unsigned int block_size>
-void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
+void openclCPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
     this->mat = mat_;
 
     coarse_vals.resize(nnzb);
@@ -339,7 +345,7 @@ void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
         }
 
         // initialize OpenclMatrices and Buffers if needed
-        auto init_func = std::bind(&CPR::init_opencl_buffers, this);
+        auto init_func = std::bind(&openclCPR::init_opencl_buffers, this);
         std::call_once(opencl_buffers_allocated, init_func);
 
         // upload matrices and vectors to GPU
@@ -351,9 +357,8 @@ void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
     }
 }
 
-
 template <unsigned int block_size>
-void CPR<block_size>::analyzeHierarchy() {
+void openclCPR<block_size>::analyzeHierarchy() {
     const DuneAmg::ParallelMatrixHierarchy& matrixHierarchy = dune_amg->matrices();
 
     // store coarsest AMG level in umfpack format, also performs LU decomposition
@@ -407,7 +412,7 @@ void CPR<block_size>::analyzeHierarchy() {
 
 
 template <unsigned int block_size>
-void CPR<block_size>::analyzeAggregateMaps() {
+void openclCPR<block_size>::analyzeAggregateMaps() {
 
     PcolIndices.resize(num_levels - 1);
     Rmatrices.clear();
@@ -448,7 +453,7 @@ void CPR<block_size>::analyzeAggregateMaps() {
 
 
 template <unsigned int block_size>
-void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x) {
+void openclCPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x) {
     OpenclMatrix *A = &d_Amatrices[level];
     OpenclMatrix *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
@@ -463,7 +468,7 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
         events.clear();
         if (err != CL_SUCCESS) {
             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-            OPM_THROW(std::logic_error, "CPR OpenCL enqueueReadBuffer error");
+            OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueReadBuffer error");
         }
 
         // solve coarsest level using umfpack
@@ -475,7 +480,7 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
         events.clear();
         if (err != CL_SUCCESS) {
             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-            OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
+            OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueWriteBuffer error");
         }
         return;
     }
@@ -508,7 +513,7 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &
 
 // x = prec(y)
 template <unsigned int block_size>
-void CPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
+void openclCPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
     // 0-initialize u and x vectors
     events.resize(d_u.size() + 1);
     err = queue->enqueueFillBuffer(*d_coarse_x, 0, 0, sizeof(double) * Nb, nullptr, &events[0]);
@@ -531,12 +536,12 @@ void CPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
 }
 
 template <unsigned int block_size>
-void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
+void openclCPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
     Dune::Timer t_bilu0;
     bilu0->apply(y, x);
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "CPR apply bilu0(): " << t_bilu0.stop() << " s";
+        out << "openclCPR apply bilu0(): " << t_bilu0.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -544,14 +549,14 @@ void CPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
     apply_amg(y, x);
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "CPR apply amg(): " << t_amg.stop() << " s";
+        out << "openclCPR apply amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
 }
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template class CPR<n>;
+template class openclCPR<n>;
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

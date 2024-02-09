@@ -202,16 +202,16 @@ if(USE_BDA_BRIDGE)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp
                                  opm/simulators/linalg/bda/WellContributions.cpp
                                  opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
-                                 opm/simulators/linalg/ISTLSolverEbosBda.cpp
-                                 opm/simulators/linalg/bda/c/cPreconditioner.cpp
-                                 opm/simulators/linalg/bda/c/cSolverBackend.cpp)
+                                 opm/simulators/linalg/ISTLSolverEbosBda.cpp)
+#                                 opm/simulators/linalg/bda/c/cPreconditioner.cpp
+#                                 opm/simulators/linalg/bda/c/cSolverBackend.cpp)
   if(OPENCL_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/BILU0.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclBILU0.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Reorder.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/ChowPatelIlu.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/BISAI.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/CPR.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclBISAI.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclCPR.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/opencl.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclKernels.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/OpenclMatrix.cpp)
@@ -478,16 +478,16 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
   opm/simulators/linalg/bda/Preconditioner.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
-  opm/simulators/linalg/bda/opencl/BILU0.hpp
+  opm/simulators/linalg/bda/opencl/openclBILU0.hpp
   opm/simulators/linalg/bda/BlockedMatrix.hpp
-  opm/simulators/linalg/bda/opencl/CPR.hpp
+  opm/simulators/linalg/bda/opencl/openclCPR.hpp
   opm/simulators/linalg/bda/cuda/cuda_header.hpp
   opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
-  opm/simulators/linalg/bda/opencl/BISAI.hpp
+  opm/simulators/linalg/bda/opencl/openclBISAI.hpp
   opm/simulators/linalg/bda/Reorder.hpp
-  opm/simulators/linalg/bda/c/cPreconditioner.hpp
-  opm/simulators/linalg/bda/c/cSolverBackend.hpp
+#  opm/simulators/linalg/bda/c/cPreconditioner.hpp
+#  opm/simulators/linalg/bda/c/cSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/opencl.hpp
   opm/simulators/linalg/bda/opencl/openclKernels.hpp
   opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp

@@ -32,7 +32,7 @@
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
-
+#include <iostream>
 // iff true, the nonzeroes of the matrix are copied row-by-row into a contiguous, pinned memory array, then a single GPU memcpy is done
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
 #define COPY_ROW_BY_ROW 0
@@ -65,13 +65,13 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
         OPM_THROW(std::logic_error, "Error unknown value for argument --linear-solver, " + linsolver);
     }
 
-    using PreconditionerType = typename Preconditioner<block_size>::PreconditionerType;
+    using PreconditionerType = typename Opm::Accelerator::PreconditionerType;
     if (use_cpr) {
-        prec = Preconditioner<block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_parallel);
+        prec = openclPreconditioner<block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_parallel);
     } else if (use_isai) {
-        prec = Preconditioner<block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_parallel);
+        prec = openclPreconditioner<block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_parallel);
     } else {
-        prec = Preconditioner<block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_parallel);
+        prec = openclPreconditioner<block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_parallel);
     }
 
     std::ostringstream out;
@@ -105,6 +105,7 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
         if (platforms.size() <= platformID) {
             OPM_THROW(std::logic_error, "Error chosen too high OpenCL platform ID");
         } else {
+// platformID=1;//NOTE-Razvan: as of 8-02-2024 I need to set this to 1 to select the nvidia on laptop!!!
             std::string platform_info;
             out << "Chosen:\n";
             platforms[platformID].getInfo(CL_PLATFORM_NAME, &platform_info);
@@ -541,14 +542,17 @@ void openclSolverBackend<block_size>::update_system_on_gpu() {
 
 template <unsigned int block_size>
 bool openclSolverBackend<block_size>::analyze_matrix() {
+// std::cout << "---in : openclSolverBackend::analyze_matrix()\n";
     Timer t;
 
     bool success;
-    if (useJacMatrix)
+    if (useJacMatrix) //{std::cout << "     before analyze with 2 arguments\n";
         success = prec->analyze_matrix(mat.get(), jacMat.get());
-    else
+//     }
+    else //{std::cout << "     before analyze with 1 arguments\n";
         success = prec->analyze_matrix(mat.get());
-
+//     }
+    
     if (verbosity > 2) {
         std::ostringstream out;
         out << "openclSolver::analyze_matrix(): " << t.stop() << " s";
@@ -557,6 +561,7 @@ bool openclSolverBackend<block_size>::analyze_matrix() {
 
     analysis_done = true;
 
+// std::cout << "---out: openclSolverBackend::analyze_matrix()\n";
     return success;
 } // end analyze_matrix()
 
