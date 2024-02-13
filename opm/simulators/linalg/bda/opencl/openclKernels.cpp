@@ -28,6 +28,8 @@
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>  // defines CHOW_PATEL
 
+#include <opm/simulators/linalg/bda/Misc.hpp>
+
 namespace Opm
 {
 namespace Accelerator
@@ -64,12 +66,6 @@ std::unique_ptr<stdwell_apply_kernel_type> OpenclKernels::stdwell_apply_k;
 std::unique_ptr<ilu_decomp_kernel_type> OpenclKernels::ilu_decomp_k;
 std::unique_ptr<isaiL_kernel_type> OpenclKernels::isaiL_k;
 std::unique_ptr<isaiU_kernel_type> OpenclKernels::isaiU_k;
-
-// divide A by B, and round up: return (int)ceil(A/B)
-unsigned int ceilDivision(const unsigned int A, const unsigned int B)
-{
-    return A / B + (A % B > 0);
-}
 
 void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::vector<cl::Device>& devices, int verbosity_)
 {

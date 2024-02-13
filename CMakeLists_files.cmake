@@ -204,6 +204,7 @@ if(USE_BDA_BRIDGE)
                                  opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
                                  opm/simulators/linalg/ISTLSolverEbosBda.cpp
                                  opm/simulators/linalg/bda/Reorder.cpp
+                                 opm/simulators/linalg/bda/Misc.cpp
                                  opm/simulators/linalg/bda/c/cKernels.cpp
                                  opm/simulators/linalg/bda/c/cCPR.cpp
                                  opm/simulators/linalg/bda/c/cBILU0.cpp
@@ -489,6 +490,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
   opm/simulators/linalg/bda/opencl/openclBISAI.hpp
+  opm/simulators/linalg/bda/Misc.cpp
   opm/simulators/linalg/bda/Reorder.hpp
   opm/simulators/linalg/bda/c/cKernels.hpp
   opm/simulators/linalg/bda/c/cMatrix.hpp

@@ -90,6 +90,12 @@ public:
     // and Ux = z
     void apply(double& y, double& x) override;
 
+    //TODO-RN: How to specify this method does not have to be implemented here
+#if HAVE_OPENCL
+    // apply preconditioner, x = prec(y)
+    void apply(const cl::Buffer& y, cl::Buffer& x) {}
+#endif
+
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()
     {
         return {{LUmat->rowPointers, LUmat->rowPointers + (Nb + 1)}, {LUmat->colIndices, LUmat->colIndices + nnzb}, diagIndex};

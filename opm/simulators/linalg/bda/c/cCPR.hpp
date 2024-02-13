@@ -117,6 +117,10 @@ public:
     bool create_preconditioner(BlockedMatrix *mat);
     bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat);
     
+#if HAVE_OPENCL
+    // apply preconditioner, x = prec(y)
+    void apply(const cl::Buffer& y, cl::Buffer& x) {}
+#endif
     // applies blocked ilu0
     // also applies amg for pressure component
     void apply(double& y, double& x);

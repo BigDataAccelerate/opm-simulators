@@ -43,12 +43,6 @@ using Dune::Timer;
 // std::vector<double> cKernels::tmp;
 // bool cKernels::initialized = false;
 
-// divide A by B, and round up: return (int)ceil(A/B)
-unsigned int ceilDivision(const unsigned int A, const unsigned int B)
-{
-    return A / B + (A % B > 0);
-}
-
 // template <unsigned int block_size>
 // cKernels<block_size>::cKernels(int verbosity_)
 cKernels::cKernels(int verbosity_)
