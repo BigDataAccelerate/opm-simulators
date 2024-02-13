@@ -109,8 +109,7 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
 #endif
     } else if (accelerator_mode.compare("c") == 0) {
         use_gpu = true;
-//TODO-Razvan: continue from here to define according to the design the cSolver!
-        //backend.reset(new Opm::Accelerator::cSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_parallel, linsolver));
+        backend.reset(new Opm::Accelerator::cSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_parallel, linsolver));
     } else if (accelerator_mode.compare("none") == 0) {
         use_gpu = false;
     } else {

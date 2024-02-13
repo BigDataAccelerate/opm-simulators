@@ -25,8 +25,10 @@
 #include <dune/istl/paamg/matrixhierarchy.hh>
 #include <dune/istl/umfpack.hh>
 
+#include <opm/simulators/linalg/bda/c/cBILU0.hpp>
+#include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/c/cMatrix.hpp>
-#include <opm/simulators/linalg/bda/Preconditioner.hpp>
+#include <opm/simulators/linalg/bda/c/cPreconditioner.hpp>
 
 #include <opm/simulators/linalg/bda/c/cSolverBackend.hpp>
 
@@ -41,7 +43,7 @@ class BlockedMatrix;
 template <unsigned int block_size>
 class cCPR : public cPreconditioner<block_size>
 {
-    typedef Preconditioner<block_size> Base;
+    typedef cPreconditioner<block_size> Base;
 
     using Base::N;
     using Base::Nb;
@@ -53,16 +55,17 @@ private:
     int num_levels;
     std::vector<double> weights, coarse_vals, coarse_x, coarse_y;
     std::vector<Matrix> Amatrices, Rmatrices; // scalar matrices that represent the AMG hierarchy
+    std::vector<cMatrix> d_Amatrices, d_Rmatrices; // scalar matrices that represent the AMG hierarchy
     std::vector<std::vector<int> > PcolIndices; // prolongation does not need a full matrix, only store colIndices
     std::vector<std::vector<double> > invDiags; // inverse of diagonal of Amatrices
-//     std::vector<cl::Buffer> d_t, d_f, d_u; // intermediate vectors used during amg cycle
-//     std::unique_ptr<cl::Buffer> d_rs;      // use before extracting the pressure
-//     std::unique_ptr<cl::Buffer> d_weights; // the quasiimpes weights, used to extract pressure
-    std::unique_ptr<cMatrix> d_mat;   // stores blocked matrix
-//     std::unique_ptr<cl::Buffer> d_coarse_y, d_coarse_x; // stores the scalar vectors
-//     std::once_flag opencl_buffers_allocated;  // only allocate OpenCL Buffers once
+    std::vector<double> d_t, d_f, d_u; // intermediate vectors used during amg cycle
+    std::unique_ptr<double> d_rs;      // use before extracting the pressure
+    std::unique_ptr<double> d_weights; // the quasiimpes weights, used to extract pressure
+//     std::unique_ptr<cMatrix> d_mat;   // stores blocked matrix
+    std::unique_ptr<double> d_coarse_y, d_coarse_x; // stores the scalar vectors
+    std::once_flag opencl_buffers_allocated;  // only allocate OpenCL Buffers once
 
-//     std::unique_ptr<BILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
+    std::unique_ptr<cBILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
     BlockedMatrix *mat = nullptr;    // input matrix, blocked
 
     using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1> >;
@@ -92,15 +95,15 @@ private:
     void analyzeAggregateMaps();
 
     // Initialize and allocate matrices and vectors
-    void init_opencl_buffers();
+//     void init_opencl_buffers();
 
     // Copy matrices and vectors to GPU
-    void opencl_upload();
+//     void opencl_upload();
 
     // apply pressure correction to vector
-    void apply_amg(const cl::Buffer& y, cl::Buffer& x);
+    void apply_amg(const double& y, double& x);
 
-    void amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x);
+    void amg_cycle_gpu(const int level, double &y, double &x);
 
     void create_preconditioner_amg(BlockedMatrix *mat);
 
@@ -108,25 +111,22 @@ public:
 
      cCPR(int verbosity, bool opencl_ilu_parallel);
 
-    bool analyze_matrix(BlockedMatrix *mat) override;
-    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool analyze_matrix(BlockedMatrix *mat);
+    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
 
-//     // set own Opencl variables, but also that of the bilu0 preconditioner
-//     void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
-
+    bool create_preconditioner(BlockedMatrix *mat);
+    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat);
+    
     // applies blocked ilu0
     // also applies amg for pressure component
-    void apply(double& y, double& x) override;
-
-    bool create_preconditioner(BlockedMatrix *mat) override;
-    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    void apply(double& y, double& x);
 };
-// 
-// // solve A^T * x = b
-// // A should represent a 3x3 matrix
-// // x and b are vectors with 3 elements
-// void solve_transposed_3x3(const double *A, const double *b, double *x);
-// 
+
+// solve A^T * x = b
+// A should represent a 3x3 matrix
+// x and b are vectors with 3 elements
+void solve_transposed_3x3(const double *A, const double *b, double *x);
+
 } // namespace Accelerator
 } // namespace Opm
 

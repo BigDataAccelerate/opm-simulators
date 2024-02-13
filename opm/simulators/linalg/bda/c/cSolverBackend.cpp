@@ -26,13 +26,14 @@
 #include <dune/common/timer.hh>
 
 // #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-// #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
+#include <opm/simulators/linalg/bda/c/cKernels.hpp>
 #include <opm/simulators/linalg/bda/c/cSolverBackend.hpp>
 // #include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
 #include <iostream>//Razvan
+#include <cstring>//Razvan
 
 // iff true, the nonzeroes of the matrix are copied row-by-row into a contiguous, pinned memory array, then a single GPU memcpy is done
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
@@ -66,156 +67,16 @@ cSolverBackend<block_size>::cSolverBackend(int verbosity_, int maxit_, double to
         OPM_THROW(std::logic_error, "Error unknown value for argument --linear-solver, " + linsolver);
     }
 
-    using PreconditionerType = typename cPreconditioner<block_size>::PreconditionerType;
+    using PreconditionerType = typename Opm::Accelerator::PreconditionerType;
     if (use_cpr) {
         prec = cPreconditioner<block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_parallel);
-    } //else if (use_isai) {
-//         prec = Preconditioner<block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_parallel);
-//     } else {
-//         prec = Preconditioner<block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_parallel);
-//     }
-// 
-//     std::ostringstream out;
-//     try {
-//         std::vector<cl::Platform> platforms;
-//         cl::Platform::get(&platforms);
-//         if (platforms.empty()) {
-//             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL platforms are found");
-//         }
-//         out << "Found " << platforms.size() << " OpenCL platforms" << "\n";
-// 
-//         if (verbosity >= 1) {
-//             std::string platform_info;
-//             for (unsigned int i = 0; i < platforms.size(); ++i) {
-//                 platforms[i].getInfo(CL_PLATFORM_NAME, &platform_info);
-//                 out << "Platform name      : " << platform_info << "\n";
-//                 platforms[i].getInfo(CL_PLATFORM_VENDOR, &platform_info);
-//                 out << "Platform vendor    : " << platform_info << "\n";
-//                 platforms[i].getInfo(CL_PLATFORM_VERSION, &platform_info);
-//                 out << "Platform version   : " << platform_info << "\n";
-//                 platforms[i].getInfo(CL_PLATFORM_PROFILE, &platform_info);
-//                 out << "Platform profile   : " << platform_info << "\n";
-//                 platforms[i].getInfo(CL_PLATFORM_EXTENSIONS, &platform_info);
-//                 out << "Platform extensions: " << platform_info << "\n\n";
-//             }
-//         }
-//         OpmLog::info(out.str());
-//         out.str("");
-//         out.clear();
-// 
-//         if (platforms.size() <= platformID) {
-//             OPM_THROW(std::logic_error, "Error chosen too high OpenCL platform ID");
-//         } else {
-//             std::string platform_info;
-//             out << "Chosen:\n";
-//             platforms[platformID].getInfo(CL_PLATFORM_NAME, &platform_info);
-//             out << "Platform name      : " << platform_info << "\n";
-//             platforms[platformID].getInfo(CL_PLATFORM_VERSION, &platform_info);
-//             out << "Platform version   : " << platform_info << "\n";
-//             OpmLog::info(out.str());
-//             out.str("");
-//             out.clear();
-//         }
-// 
-//         platforms[platformID].getDevices(CL_DEVICE_TYPE_ALL, &devices);
-// 
-//         if (devices.empty()) {
-//             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL devices are found");
-//         }
-//         out << "Found " << devices.size() << " OpenCL devices" << "\n";
-// 
-//         if (verbosity >= 1) {
-//             for (unsigned int i = 0; i < devices.size(); ++i) {
-//                 std::string device_info;
-//                 std::vector<size_t> work_sizes;
-//                 std::vector<cl_device_partition_property> partitions;
-// 
-//                 devices[i].getInfo(CL_DEVICE_NAME, &device_info);
-//                 out << "CL_DEVICE_NAME            : " << device_info << "\n";
-//                 devices[i].getInfo(CL_DEVICE_VENDOR, &device_info);
-//                 out << "CL_DEVICE_VENDOR          : " << device_info << "\n";
-//                 devices[i].getInfo(CL_DRIVER_VERSION, &device_info);
-//                 out << "CL_DRIVER_VERSION         : " << device_info << "\n";
-//                 devices[i].getInfo(CL_DEVICE_BUILT_IN_KERNELS, &device_info);
-//                 out << "CL_DEVICE_BUILT_IN_KERNELS: " << device_info << "\n";
-//                 devices[i].getInfo(CL_DEVICE_PROFILE, &device_info);
-//                 out << "CL_DEVICE_PROFILE         : " << device_info << "\n";
-//                 devices[i].getInfo(CL_DEVICE_OPENCL_C_VERSION, &device_info);
-//                 out << "CL_DEVICE_OPENCL_C_VERSION: " << device_info << "\n";
-//                 devices[i].getInfo(CL_DEVICE_EXTENSIONS, &device_info);
-//                 out << "CL_DEVICE_EXTENSIONS      : " << device_info << "\n";
-// 
-//                 devices[i].getInfo(CL_DEVICE_MAX_WORK_ITEM_SIZES, &work_sizes);
-//                 for (unsigned int j = 0; j < work_sizes.size(); ++j) {
-//                     out << "CL_DEVICE_MAX_WORK_ITEM_SIZES[" << j << "]: " << work_sizes[j] << "\n";
-//                 }
-//                 devices[i].getInfo(CL_DEVICE_PARTITION_PROPERTIES, &partitions);
-//                 for (unsigned int j = 0; j < partitions.size(); ++j) {
-//                     out << "CL_DEVICE_PARTITION_PROPERTIES[" << j << "]: " << partitions[j] << "\n";
-//                 }
-//                 partitions.clear();
-//                 devices[i].getInfo(CL_DEVICE_PARTITION_TYPE, &partitions);
-//                 for (unsigned int j = 0; j < partitions.size(); ++j) {
-//                     out << "CL_DEVICE_PARTITION_PROPERTIES[" << j << "]: " << partitions[j] << "\n";
-//                 }
-// 
-//                 // C-style properties
-//                 cl_device_id tmp_id = devices[i]();
-//                 cl_ulong size;
-//                 clGetDeviceInfo(tmp_id, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
-//                 out << "CL_DEVICE_LOCAL_MEM_SIZE       : " << size / 1024 << " KB\n";
-//                 clGetDeviceInfo(tmp_id, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
-//                 out << "CL_DEVICE_GLOBAL_MEM_SIZE      : " << size / 1024 / 1024 / 1024 << " GB\n";
-//                 clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_ulong), &size, 0);
-//                 out << "CL_DEVICE_MAX_COMPUTE_UNITS    : " << size << "\n";
-//                 clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &size, 0);
-//                 out << "CL_DEVICE_MAX_MEM_ALLOC_SIZE   : " << size / 1024 / 1024 << " MB\n";
-//                 clGetDeviceInfo(tmp_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(cl_ulong), &size, 0);
-//                 out << "CL_DEVICE_MAX_WORK_GROUP_SIZE  : " << size << "\n";
-//                 clGetDeviceInfo(tmp_id, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &size, 0);
-//                 out << "CL_DEVICE_GLOBAL_MEM_SIZE      : " << size / 1024 / 1024 / 1024 << " GB\n\n";
-//             }
-//         }
-//         OpmLog::info(out.str());
-//         out.str("");
-//         out.clear();
-// 
-//         if (devices.size() <= deviceID){
-//             OPM_THROW(std::logic_error, "Error chosen too high OpenCL device ID");
-//         } else {
-//             std::string device_info;
-//             out << "Chosen:\n";
-//             devices[deviceID].getInfo(CL_DEVICE_NAME, &device_info);
-//             out << "CL_DEVICE_NAME            : " << device_info << "\n";
-//             devices[deviceID].getInfo(CL_DEVICE_VERSION, &device_info);
-//             out << "CL_DEVICE_VERSION         : " << device_info << "\n";
-//             OpmLog::info(out.str());
-//             out.str("");
-//             out.clear();
-//         }
-// 
-//         // removed all unused devices
-//         if (deviceID != 0)
-//         {
-//             devices[0] = devices[deviceID];
-//         }
-//         devices.resize(1);
-// 
-//         context = std::make_shared<cl::Context>(devices[0]);
-//         queue.reset(new cl::CommandQueue(*context, devices[0], 0, &err));
-// 
-//         OpenclKernels::init(context.get(), queue.get(), devices, verbosity);
-// 
-//     } catch (const cl::Error& error) {
-//         std::ostringstream oss;
-//         oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
-//         oss << getErrorString(error.err());
-//         // rethrow exception
-//         OPM_THROW(std::logic_error, oss.str());
-//     } catch (const std::logic_error& error) {
-//         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-//         throw error;
-//     }
+    } else if (use_isai) {
+        prec = cPreconditioner<block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_parallel);
+    } else {
+        prec = cPreconditioner<block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_parallel);
+    }
+
+    ckernels = new cKernels(verbosity_);
 }
 
 template <unsigned int block_size>
@@ -226,53 +87,38 @@ cSolverBackend<block_size>::cSolverBackend(int verbosity_, int maxit_, double to
     // cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_parallel, /*use_amg=*/false);
 }
 
-// template <unsigned int block_size>
-// void cSolverBackend<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
-//     context = context_;
-//     queue = queue_;
-// }
-
-
 template <unsigned int block_size>
 void cSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
     float it;
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
-
+std::cout << "---in : cSolverBackend<block_size>::gpu_pbicgstab(wellContribs, res)\n";
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
     // set r to the initial residual
     // if initial x guess is not 0, must call applyblockedscaleadd(), not implemented
-    //applyblockedscaleadd(-1.0, mat, x, r);
+    // applyblockedscaleadd(-1.0, mat, x, r);
 
-//     // set initial values
-//     events.resize(5);
-//     queue->enqueueFillBuffer(d_p, 0, 0, sizeof(double) * N, nullptr, &events[0]);
-//     queue->enqueueFillBuffer(d_v, 0, 0, sizeof(double) * N, nullptr, &events[1]);
-//     rho = 1.0;
-//     alpha = 1.0;
-//     omega = 1.0;
-// 
-//     queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &events[2]);
-//     queue->enqueueCopyBuffer(d_r, d_rw, 0, 0, sizeof(double) * N, nullptr, &events[3]);
-//     queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &events[4]);
-// 
-//     cl::WaitForEvents(events);
-//     events.clear();
-//     if (err != CL_SUCCESS) {
-//         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-//         OPM_THROW(std::logic_error, "cSolverBackend OpenCL enqueue[Fill|Copy]Buffer error");
-//     }
-// 
-//     norm = OpenclKernels::norm(d_r, d_tmp, N);
-//     norm_0 = norm;
-// 
-//     if (verbosity > 1) {
-//         std::ostringstream out;
-//         out << std::scientific << "openclSolver initial norm: " << norm_0;
-//         OpmLog::info(out.str());
-//     }
-// 
+    // set initial values
+    memset(d_p, 0, sizeof(double) * N);
+    memset(d_v, 0, sizeof(double) * N);
+    rho = 1.0;
+    alpha = 1.0;
+    omega = 1.0;
+
+    d_r = d_b; //queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &events[2]);
+    d_rw = d_r; //queue->enqueueCopyBuffer(d_r, d_rw, 0, 0, sizeof(double) * N, nullptr, &events[3]);
+    d_p = d_r; //queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &events[4]);
+    
+    norm = ckernels->norm(d_r, d_tmp, N);
+    norm_0 = norm;
+
+    if (verbosity > 1) {
+        std::ostringstream out;
+        out << std::scientific << "cSolver initial norm: " << norm_0;
+        OpmLog::info(out.str());
+    }
+
 //     if (verbosity >= 3) {
 //         t_rest.start();
 //     }
@@ -404,6 +250,7 @@ void cSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, 
 //         out << "openclSolver::total_solve: " << res.elapsed << " s\n";
 //         OpmLog::info(out.str());
 //     }
+std::cout << "---out: cSolverBackend<block_size>::gpu_pbicgstab(wellContribs, res)\n";
 }
 
 
@@ -425,17 +272,13 @@ std::cout << "---in : cSolverBackend<block_size>::initialize(..)\n";
         out << "Blocks in ILU matrix: " << jacMatrix->nnzbs << "\n";
     }
     out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
-//     out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
      OpmLog::info(out.str());
      out.str("");
      out.clear();
 
-//     try {
-//         prec->setOpencl(context, queue);
-// 
-#if COPY_ROW_BY_ROW
-        vals_contiguous.resize(nnz);
-#endif
+// #if COPY_ROW_BY_ROW
+//         vals_contiguous.resize(nnz);
+// #endif
         mat = matrix;
         jacMat = jacMatrix;
 
@@ -454,17 +297,7 @@ std::cout << "---in : cSolverBackend<block_size>::initialize(..)\n";
         d_Avals = (double*) malloc(sizeof(double) * nnz);
         d_Acols = (int*) malloc(sizeof(int) * nnzb);
         d_Arows = (int*) malloc(sizeof(int) * (Nb + 1));
-//     } catch (const cl::Error& error) {
-//         std::ostringstream oss;
-//         oss << "OpenCL Error: " << error.what() << "(" << error.err() << ")\n";
-//         oss << getErrorString(error.err());
-//         // rethrow exception
-//         OPM_THROW(std::logic_error, oss.str());
-//     } catch (const std::logic_error& error) {
-//         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-//         throw error;
-//     }
-// 
+        
     initialized = true;
 std::cout << "---out: cSolverBackend<block_size>::initialize(..)\n";
 } // end initialize()
@@ -544,7 +377,7 @@ void cSolverBackend<block_size>::update_system_on_gpu() {
 template <unsigned int block_size>
 bool cSolverBackend<block_size>::analyze_matrix() {
     Timer t;
-std::cout << "---in : cSolverBackend<block_size>::analyze_matrix()\n";
+std::cout << "---in : cSolverBackend<block_size>::analyze_matrix() ; useJacMatrix = " << useJacMatrix << std::endl;
     bool success;
     if (useJacMatrix)
         success = prec->analyze_matrix(mat.get(), jacMat.get());
@@ -565,6 +398,7 @@ std::cout << "---out: cSolverBackend<block_size>::analyze_matrix()\n";
 
 template <unsigned int block_size>
 void cSolverBackend<block_size>::update_system(double *vals, double *b) {
+std::cout << "---in : cSolverBackend<block_size>::update_system(vals,b)\n";
     Timer t;
 
     mat->nnzValues = vals;
@@ -572,27 +406,30 @@ void cSolverBackend<block_size>::update_system(double *vals, double *b) {
 
     if (verbosity > 2) {
         std::ostringstream out;
-        out << "openclSolver::update_system(): " << t.stop() << " s";
+        out << "cSolverBackend::update_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
+std::cout << "---out: cSolverBackend<block_size>::update_system(vals,b)\n";
 } // end update_system()
 
 
 template <unsigned int block_size>
 bool cSolverBackend<block_size>::create_preconditioner() {
+std::cout << "---in : cSolverBackend<block_size>::create_preconditioner()\n";
     Timer t;
 
     bool result;
-//     if (useJacMatrix)
-//         result = prec->create_preconditioner(mat.get(), jacMat.get());
-//     else
-//         result = prec->create_preconditioner(mat.get());
+    if (useJacMatrix)
+        result = prec->create_preconditioner(mat.get(), jacMat.get());
+    else
+        result = prec->create_preconditioner(mat.get());
 
     if (verbosity > 2) {
         std::ostringstream out;
         out << "openclSolver::create_preconditioner(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
+std::cout << "---out: cSolverBackend<block_size>::create_preconditioner()\n";
     return result;
 } // end create_preconditioner()
 
@@ -602,25 +439,13 @@ void cSolverBackend<block_size>::solve_system(WellContributions &wellContribs, B
     Timer t;
 
     // actually solve
-//     try {
-        gpu_pbicgstab(wellContribs, res);
-//     } catch (const cl::Error& error) {
-//         std::ostringstream oss;
-//         oss << "cSolverBackend::solve_system error: " << error.what() << "(" << error.err() << ")\n";
-//         oss << getErrorString(error.err());
-//         // rethrow exception
-//         OPM_THROW(std::logic_error, oss.str());
-//     } catch (const std::logic_error& error) {
-//         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-//         throw error;
-//     }
+    gpu_pbicgstab(wellContribs, res);
 
     if (verbosity > 2) {
         std::ostringstream out;
         out << "openclSolver::solve_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
-
 } // end solve_system()
 
 
@@ -656,23 +481,24 @@ std::cout << "-out: cSolverBackend<block_size>::solve_system\ --> return BDA_SOL
                 return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
             }
         }
-std::cout << " Exiting (before update system).... \n"; exit(0);
+
         update_system(matrix->nnzValues, b);
         if (!create_preconditioner()) {
 std::cout << "-out: cSolverBackend<block_size>::solve_system --> return BDA_SOLVER_CREATE_PRECONDITIONER_FAILED (1)\n";
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
-        copy_system_to_gpu();
+//         copy_system_to_gpu();
     } else {
         update_system(matrix->nnzValues, b);
         if (!create_preconditioner()) {
 std::cout << "-out: cSolverBackend<block_size>::solve_system --> return BDA_SOLVER_CREATE_PRECONDITIONER_FAILED (2)\n";
             return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
         }
-        update_system_on_gpu();
+//         update_system_on_gpu();
     }
     solve_system(wellContribs, res);
 std::cout << "-out: cSolverBackend<block_size>::solve_system\n";
+//std::cout << " Exiting (after solve system SUCCESSED).... \n"; exit(0);
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
@@ -681,7 +507,6 @@ std::cout << "-out: cSolverBackend<block_size>::solve_system\n";
 template cSolverBackend<n>::cSolverBackend(                          \
     int, int, double, unsigned int, unsigned int, bool, std::string);\
 template cSolverBackend<n>::cSolverBackend(int, int, double, bool);  \
-
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

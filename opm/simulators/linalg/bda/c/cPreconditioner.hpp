@@ -35,26 +35,14 @@ class cPreconditioner : public Preconditioner<block_size>
 {
 
 protected:
-//     int N = 0;       // number of rows of the matrix
-//     int Nb = 0;      // number of blockrows of the matrix
-//     int nnz = 0;     // number of nonzeroes of the matrix (scalar)
-//     int nnzb = 0;    // number of blocks of the matrix
-    int verbosity = 0;
-
     cPreconditioner(int verbosity_) :
-    verbosity(verbosity_)
+    Preconditioner<block_size>(verbosity_)
     {};
 
 public:
-    enum PreconditionerType {
-        BILU0,
-        CPR,
-        BISAI
-    };
-
-    static std::unique_ptr<cPreconditioner> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
-
     virtual ~cPreconditioner() = default;
+    
+    static std::unique_ptr<cPreconditioner> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
 
     // apply preconditioner, x = prec(y)
     virtual void apply(double& y, double& x) = 0;
@@ -62,13 +50,13 @@ public:
     // analyze matrix, e.g. the sparsity pattern
     // probably only called once
     // the version with two params can be overloaded, if not, it will default to using the one param version
-    virtual bool analyze_matrix(BlockedMatrix *mat) = 0;
-    virtual bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
+//     virtual bool analyze_matrix(BlockedMatrix *mat) = 0;
+//     virtual bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
 
     // create/update preconditioner, probably used every linear solve
     // the version with two params can be overloaded, if not, it will default to using the one param version
     virtual bool create_preconditioner(BlockedMatrix *mat) = 0;
-    virtual bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat);
+    virtual bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) = 0;
 };
 
 } //namespace Accelerator

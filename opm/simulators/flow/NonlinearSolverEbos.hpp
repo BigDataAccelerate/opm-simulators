@@ -200,6 +200,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
             report.timestep_length = timer.currentStepLength();
 
 static int stepCounter = 0;
+std::cout << "@@@@@@@@@@@@@@@@@@@ IN: NonlinearSolverEbos::step() @@@@@@@@@@@@@@@@@@@ " << stepCounter << std::endl;
 
             // Do model-specific once-per-step calculations.
             report += model_->prepareStep(timer);
@@ -245,6 +246,8 @@ static int stepCounter = 0;
             // Do model-specific post-step actions.
             report += model_->afterStep(timer);
             report.converged = true;
+
+std::cout << "@@@@@@@@@@@@@@@@@@@ OUT: NonlinearSolverEbos::step() @@@@@@@@@@@@@@@@@@@ " << stepCounter << std::endl;
 
 if(stepCounter == 3) {std::cout << "exiting after the " << stepCounter+1 << " step.....\n";exit(0);}
 stepCounter++;

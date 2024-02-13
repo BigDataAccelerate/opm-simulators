@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_OPENCLMATRIX_HEADER_INCLUDED
-#define OPM_OPENCLMATRIX_HEADER_INCLUDED
+#ifndef OPM_CMATRIX_HEADER_INCLUDED
+#define OPM_CMATRIX_HEADER_INCLUDED
 
 #include <vector>
 
@@ -41,14 +41,14 @@ public:
       nnzbs(nnzbs_),
       block_size(block_size_)
     {
-        nnzValues = (double*) malloc(sizeof(double) * block_size * block_size * nnzbs);
-        colIndices = (int*) malloc(sizeof(int) * nnzbs);
-        rowPointers = (int*) malloc(sizeof(int) * (Nb + 1));
+        nnzValues.resize(block_size * block_size * nnzbs);
+        colIndices.resize(sizeof(int) * nnzbs);
+        rowPointers.resize(sizeof(int) * (Nb + 1));
     }
 
-    double* nnzValues;
-    int* colIndices;
-    int* rowPointers;
+    std::vector<double> nnzValues;
+    std::vector<int> colIndices;
+    std::vector<int> rowPointers;
     int Nb, Mb;
     int nnzbs;
     unsigned int block_size;
@@ -57,4 +57,4 @@ public:
 } // namespace Accelerator
 } // namespace Opm
 
-#endif // OPM_OPENCLMATRIX_HEADER_INCLUDED
+#endif // OPM_CMATRIX_HEADER_INCLUDED

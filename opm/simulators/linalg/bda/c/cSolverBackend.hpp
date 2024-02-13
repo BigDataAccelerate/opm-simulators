@@ -25,6 +25,7 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/c/cPreconditioner.hpp>
+#include <opm/simulators/linalg/bda/c/cKernels.hpp>
 
 namespace Opm
 {
@@ -36,6 +37,7 @@ template <unsigned int block_size>
 class cSolverBackend : public BdaSolver<block_size>
 {
     typedef BdaSolver<block_size> Base;
+//     typedef cKernels<block_size> cKernel;
 
     using Base::N;
     using Base::Nb;
@@ -49,6 +51,7 @@ class cSolverBackend : public BdaSolver<block_size>
     using Base::initialized;
 
 private:
+    cKernels *ckernels;
     double *h_b = nullptr;                // b vector, on host
     std::vector<double> vals_contiguous;  // only used if COPY_ROW_BY_ROW is true in cSolverBackend.cpp
 
@@ -58,8 +61,6 @@ private:
     double* d_x, *d_b, *d_rb, *d_r, *d_rw, *d_p;   // vectors, used during linear solve
     double* d_pw, *d_s, *d_t, *d_v;              // vectors, used during linear solve
     double* d_tmp;                            // used as tmp GPU buffer for dot() and norm()
-
-//     std::vector<cl::Device> devices;
 
     bool useJacMatrix = false;
 

@@ -34,32 +34,21 @@ namespace Accelerator
 
 template <unsigned int block_size>
 std::unique_ptr<cPreconditioner<block_size> > cPreconditioner<block_size>::create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel) {
-//     if (type == PreconditionerType::BILU0) {
-//         return std::make_unique<Opm::Accelerator::BILU0<block_size> >(opencl_ilu_parallel, verbosity);
-/*/     } else*/ if (type == PreconditionerType::CPR) {
+    if (type == PreconditionerType::BILU0) {
+//         return std::make_unique<Opm::Accelerator::cBILU0<block_size> >(opencl_ilu_parallel, verbosity);
+     } else if (type == PreconditionerType::CPR) {
         return std::make_unique<Opm::Accelerator::cCPR<block_size> >(verbosity, opencl_ilu_parallel);
-    } /*else if (type == PreconditionerType::BISAI) {*/
-// //         return std::make_unique<Opm::Accelerator::BISAI<block_size> >(opencl_ilu_parallel, verbosity);
-//     } else {
-//         OPM_THROW(std::logic_error, "Invalid PreconditionerType");
-//     }
+    } else if (type == PreconditionerType::BISAI) {
+//         return std::make_unique<Opm::Accelerator::cBISAI<block_size> >(opencl_ilu_parallel, verbosity);
+    } else {
+        OPM_THROW(std::logic_error, "Invalid PreconditionerType");
+    }
 }
 
-template <unsigned int block_size>
-bool cPreconditioner<block_size>::analyze_matrix(BlockedMatrix *mat, [[maybe_unused]] BlockedMatrix *jacMat) {
-    return analyze_matrix(mat);
-}
-
-template <unsigned int block_size>
-bool cPreconditioner<block_size>::create_preconditioner(BlockedMatrix *mat, [[maybe_unused]] BlockedMatrix *jacMat) {
-    return create_preconditioner(mat);
-}
 
 //TODO: define macros if we define opencl or c based buffers or whatever
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
 template std::unique_ptr<cPreconditioner<n> > cPreconditioner<n>::create(PreconditionerType, int, bool);         \
-template bool cPreconditioner<n>::analyze_matrix(BlockedMatrix *, BlockedMatrix *);                              \
-template bool cPreconditioner<n>::create_preconditioner(BlockedMatrix *, BlockedMatrix *);
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);
