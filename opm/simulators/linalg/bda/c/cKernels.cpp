@@ -51,69 +51,38 @@ cKernels::cKernels(int verbosity_)
     initialized = true;
 } 
 
-// double cKernels::dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N)
-// {
-//     const unsigned int work_group_size = 256;
-//     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
-//     const unsigned int total_work_items = num_work_groups * work_group_size;
-//     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
-//     Timer t_dot;
-//     tmp.resize(num_work_groups);
-// 
-//     cl::Event event = (*dot_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in1, in2, out, N, cl::Local(lmem_per_work_group));
-// 
-//     queue->enqueueReadBuffer(out, CL_TRUE, 0, sizeof(double) * num_work_groups, tmp.data());
-// 
-//     double gpu_sum = 0.0;
-//     for (unsigned int i = 0; i < num_work_groups; ++i) {
-//         gpu_sum += tmp[i];
-//     }
-// 
-//     if (verbosity >= 4) {
-//         event.wait();
-//         std::ostringstream oss;
-//         oss << std::scientific << "cKernels dot() time: " << t_dot.stop() << " s";
-//         OpmLog::info(oss.str());
-//     }
-// 
-//     return gpu_sum;
-// }
+double cKernels::dot(double* in1, double* in2, double* out, int N)
+{
+    Timer t_dot;
+    double c_sum = 0.0;
+    
+    for (unsigned int i = 0; i < N; ++i) {
+        c_sum += in1[i] * in2[i];
+    }
+
+    if (verbosity >= 4) {
+        std::ostringstream oss;
+        oss << std::scientific << "cKernels dot() time: " << t_dot.stop() << " s";
+        OpmLog::info(oss.str());
+    }
+std::cout << "    dot->c_sum = " << c_sum << std::endl;
+    return c_sum;
+}
 
 double cKernels::norm(double* in, double* out, int N)
 {
-//     const unsigned int work_group_size = 256;
-//     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
-//     const unsigned int total_work_items = num_work_groups * work_group_size;
-//     const unsigned int lmem_per_work_group = sizeof(double) * work_group_size;
-//     Timer t_norm;
-//     tmp.resize(num_work_groups);
-// 
-//     cl::Event event = (*norm_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, out, N, cl::Local(lmem_per_work_group));
-// 
-//     queue->enqueueReadBuffer(out, CL_TRUE, 0, sizeof(double) * num_work_groups, tmp.data());
-    std::cout << "N = " << N << std::endl;
-    for(int i=0; i<100; i++) {
-        std::cout << std::scientific << "     in[" << i << "] = " << in[i];
-        std::cout << std::scientific << "\t\tout[" << i << "] = " << out[i] << std::endl;
+    double c_norm = 0;
+    for(unsigned int i=0; i<N; i++)
+    {
+        c_norm += in[i] * in[i];
     }
-    double gpu_norm = 10.0;
-    exit(0);
-//     for (unsigned int i = 0; i < num_work_groups; ++i) {
-//         gpu_norm += tmp[i];
-//     }
-//     gpu_norm = sqrt(gpu_norm);
-// 
-//     if (verbosity >= 4) {
-//         event.wait();
-//         std::ostringstream oss;
-//         oss << std::scientific << "cKernels norm() time: " << t_norm.stop() << " s";
-//         OpmLog::info(oss.str());
-//     }
-
-    return gpu_norm;
+    
+    c_norm = sqrt(c_norm);
+    
+    return c_norm;
 }
 
-// void cKernels::axpy(cl::Buffer& in, const double a, cl::Buffer& out, int N)
+// void cKernels::axpy(double* in, const double a, double* out, int N)
 // {
 //     const unsigned int work_group_size = 32;
 //     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
@@ -130,7 +99,7 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::scale(cl::Buffer& in, const double a, int N)
+// void cKernels::scale(double* in, const double a, int N)
 // {
 //     const unsigned int work_group_size = 32;
 //     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
@@ -147,7 +116,7 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::vmul(const double alpha, cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N)
+// void cKernels::vmul(const double alpha, double* in1, double* in2, double* out, int N)
 // {
 //     const unsigned int work_group_size = 32;
 //     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
@@ -163,10 +132,11 @@ double cKernels::norm(double* in, double* out, int N)
 //         OpmLog::info(oss.str());
 //     }
 // }
-// 
-// void cKernels::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r,
-//                            const double omega, const double beta, int N)
-// {
+
+/// p = (p - omega * v) * beta + r
+void cKernels::custom(double* p, double* v, double* r,
+                           const double omega, const double beta, int N)
+{
 //     const unsigned int work_group_size = 32;
 //     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
 //     const unsigned int total_work_items = num_work_groups * work_group_size;
@@ -180,9 +150,9 @@ double cKernels::norm(double* in, double* out, int N)
 //         oss << std::scientific << "cKernels custom() time: " << t_custom.stop() << " s";
 //         OpmLog::info(oss.str());
 //     }
-// }
-// 
-// void cKernels::full_to_pressure_restriction(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb)
+}
+
+// void cKernels::full_to_pressure_restriction(const double* fine_y, double* weights, double* coarse_y, int Nb)
 // {
 //     const unsigned int work_group_size = 32;
 //     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -199,7 +169,7 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::add_coarse_pressure_correction(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb)
+// void cKernels::add_coarse_pressure_correction(double* coarse_x, double* fine_x, int pressure_idx, int Nb)
 // {
 //     const unsigned int work_group_size = 32;
 //     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -216,7 +186,7 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::prolongate_vector(const cl::Buffer& in, cl::Buffer& out, const cl::Buffer& cols, int N)
+// void cKernels::prolongate_vector(const double* in, double* out, const double* cols, int N)
 // {
 //     const unsigned int work_group_size = 32;
 //     const unsigned int num_work_groups = ceilDivision(N, work_group_size);
@@ -233,8 +203,8 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
-//                          const cl::Buffer& x, cl::Buffer& b, int Nb,
+// void cKernels::spmv(double* vals, double* cols, double* rows,
+//                          const double* x, double* b, int Nb,
 //                          unsigned int block_size, bool reset, bool add)
 // {
 //     const unsigned int work_group_size = 32;
@@ -270,9 +240,9 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
-//                             cl::Buffer& x, const cl::Buffer& rhs,
-//                             cl::Buffer& out, int Nb, unsigned int block_size)
+// void cKernels::residual(double* vals, double* cols, double* rows,
+//                             double* x, const double* rhs,
+//                             double* out, int Nb, unsigned int block_size)
 // {
 //     const unsigned int work_group_size = 32;
 //     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -297,10 +267,10 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::ILU_apply1(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols,
-//                                cl::Buffer& rows, cl::Buffer& diagIndex,
-//                                const cl::Buffer& y, cl::Buffer& x,
-//                                cl::Buffer& rowsPerColor, int color,
+// void cKernels::ILU_apply1(double* rowIndices, double* vals, double* cols,
+//                                double* rows, double* diagIndex,
+//                                const double* y, double* x,
+//                                double* rowsPerColor, int color,
 //                                int rowsThisColor, unsigned int block_size)
 // {
 //     const unsigned int work_group_size = preferred_workgroup_size_multiple;
@@ -322,10 +292,10 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::ILU_apply2(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols,
-//                                cl::Buffer& rows, cl::Buffer& diagIndex,
-//                                cl::Buffer& invDiagVals, cl::Buffer& x,
-//                                cl::Buffer& rowsPerColor, int color,
+// void cKernels::ILU_apply2(double* rowIndices, double* vals, double* cols,
+//                                double* rows, double* diagIndex,
+//                                double* invDiagVals, double* x,
+//                                double* rowsPerColor, int color,
 //                                int rowsThisColor, unsigned int block_size)
 // {
 //     const unsigned int work_group_size = preferred_workgroup_size_multiple;
@@ -347,9 +317,9 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::ILU_decomp(int firstRow, int lastRow, cl::Buffer& rowIndices,
-//                                cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
-//                                cl::Buffer& diagIndex, cl::Buffer& invDiagVals,
+// void cKernels::ILU_decomp(int firstRow, int lastRow, double* rowIndices,
+//                                double* vals, double* cols, double* rows,
+//                                double* diagIndex, double* invDiagVals,
 //                                int rowsThisColor, unsigned int block_size)
 // {
 //     const unsigned int work_group_size = 128;
@@ -373,7 +343,7 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::apply_stdwells(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
+// void cKernels::apply_stdwells(double* d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
 //     cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
 //     int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells)
 // {
@@ -395,8 +365,8 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::isaiL(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& mapping, cl::Buffer& nvc,
-//     cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals, cl::Buffer& invLvals, unsigned int Nb)
+// void cKernels::isaiL(double* diagIndex, double* colPointers, double* mapping, double* nvc,
+//     double* luIdxs, double* xxIdxs, double* dxIdxs, double* LUvals, double* invLvals, unsigned int Nb)
 // {
 //     const unsigned int work_group_size = 256;
 //     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);
@@ -414,9 +384,9 @@ double cKernels::norm(double* in, double* out, int N)
 //     }
 // }
 // 
-// void cKernels::isaiU(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& rowIndices, cl::Buffer& mapping,
-//         cl::Buffer& nvc, cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals,
-//         cl::Buffer& invDiagVals, cl::Buffer& invUvals, unsigned int Nb)
+// void cKernels::isaiU(double* diagIndex, double* colPointers, double* rowIndices, double* mapping,
+//         double* nvc, double* luIdxs, double* xxIdxs, double* dxIdxs, double* LUvals,
+//         double* invDiagVals, double* invUvals, unsigned int Nb)
 // {
 //     const unsigned int work_group_size = 256;
 //     const unsigned int num_work_groups = ceilDivision(Nb, work_group_size);

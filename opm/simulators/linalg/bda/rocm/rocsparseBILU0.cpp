@@ -24,7 +24,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/c/cBILU0.hpp> 
+#include <opm/simulators/linalg/bda/rocm/rocsparseBILU0.hpp> 
 #include <opm/simulators/linalg/bda/Reorder.hpp>
 
 #include <sstream>
@@ -40,15 +40,15 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-cBILU0<block_size>::cBILU0(bool opencl_ilu_parallel_, int verbosity_) : 
-    cPreconditioner<block_size>(verbosity_)
+rocsparseBILU0<block_size>::rocsparseBILU0(bool opencl_ilu_parallel_, int verbosity_) : 
+    rocsparsePreconditioner<block_size>(verbosity_)
 {
     opencl_ilu_parallel = opencl_ilu_parallel_;
 }
 
 
 template <unsigned int block_size>
-bool cBILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
+bool rocsparseBILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
 {
 // std::cout << "-----in : cBILU0<block_size>::analyze_matrix(BlockedMatrix *mat_) --> call analyze_matrix(mat, nullptr) \n";
     return analyze_matrix(mat, nullptr);
@@ -56,7 +56,7 @@ bool cBILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
 
 
 template <unsigned int block_size>
-bool cBILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool rocsparseBILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
 {
 std::cout << "-----in : cBILU0<block_size>::analyze_matrix(mat_, jacMat) \n";
     const unsigned int bs = block_size;
@@ -136,14 +136,14 @@ std::cout << "-----out: cBILU0<block_size>::analyze_matrix(mat_, jacMat) \n";
 
 
 template <unsigned int block_size>
-bool cBILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
+bool rocsparseBILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
 {
     return create_preconditioner(mat, nullptr);
 }
 
 
 template <unsigned int block_size>
-bool cBILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool rocsparseBILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
 {
     const unsigned int bs = block_size;
 
@@ -151,16 +151,13 @@ bool cBILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix
 
     // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
     Timer t_copy;
-    memcpy(LUmat->nnzValues, matToDecompose->nnzValues, sizeof(double) * bs * bs * matToDecompose->nnzbs);
+//     memcpy(LUmat->nnzValues, matToDecompose->nnzValues, sizeof(double) * bs * bs * matToDecompose->nnzbs);
 
     if (verbosity >= 3){
         std::ostringstream out;
         out << "cBILU0 memcpy: " << t_copy.stop() << " s";
         OpmLog::info(out.str());
     }
-std::cout << " N = " << N << std::endl;
-std::cout << " Nb = " << Nb << std::endl;
-std::cout << " numColors = " << numColors << std::endl;
 
     Timer t_copyToGpu;
 
@@ -169,7 +166,7 @@ std::cout << " numColors = " << numColors << std::endl;
         for (int row = 0; row < Nb; ++row) {
             int rowStart = LUmat->rowPointers[row];
             int rowEnd = LUmat->rowPointers[row+1];
-            
+
             auto candidate = std::find(LUmat->colIndices + rowStart, LUmat->colIndices + rowEnd, row);
             assert(candidate != LUmat->colIndices + rowEnd);
             diagIndex[row] = candidate - LUmat->colIndices;
@@ -208,32 +205,40 @@ std::cout << " numColors = " << numColors << std::endl;
 // however, if individual kernel calls are timed, waiting for events is needed
 // behavior on other GPUs is untested
 template <unsigned int block_size>
-void cBILU0<block_size>::apply( double& y, double& x)
+void rocsparseBILU0<block_size>::apply( double& y, double& x)
 {
     const double relaxation = 0.9;
     Timer t_apply;
-    
-std::cout << "----> TODO: cBILU0 apply" << std::endl;
 
     for (int color = 0; color < numColors; ++color) {
+// #if CHOW_PATEL
+//         OpenclKernels::ILU_apply1(s.rowIndices, s.Lvals, s.Lcols, s.Lrows,
+//                                   s.diagIndex, y, x, s.rowsPerColor,
+//                                   color, rowsPerColor[color], block_size);
+// #else
 //         OpenclKernels::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
 //                                   s.diagIndex, y, x, s.rowsPerColor,
 //                                   color, rowsPerColor[color], block_size);
 //         std::cout << "ILU_apply1 for color: " << color << std::endl;
+// #endif
     }
 
     for (int color = numColors - 1; color >= 0; --color) {
+// #if CHOW_PATEL
+//         OpenclKernels::ILU_apply2(s.rowIndices, s.Uvals, s.Ucols, s.Urows,
+//                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
+//                                   color, rowsPerColor[color], block_size);
+// #else
 //         OpenclKernels::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
 //                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
 //                                   color, rowsPerColor[color], block_size);
 //         std::cout << "ILU_apply2 for color: " << color << std::endl;
+// #endif
     }
 
     // apply relaxation
 //     OpenclKernels::scale(x, relaxation, N);
-      std::cout << "----> TODO: OpenclKernels::scale(x, relaxation,N);\n"; 
-std::cout << "---> after: x[3] = " << (&x)[3] << std::endl;
-std::cout << "exiting in prec->apply in cBILU0\n";exit(0);
+       std::cout << "scale kernel" << std::endl;
 
     if (verbosity >= 4) {
         std::ostringstream out;
@@ -243,7 +248,7 @@ std::cout << "exiting in prec->apply in cBILU0\n";exit(0);
 }
 
 #define INSTANTIATE_BDA_FUNCTIONS(n) \
-template class cBILU0<n>;
+template class rocsparseBILU0<n>;
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

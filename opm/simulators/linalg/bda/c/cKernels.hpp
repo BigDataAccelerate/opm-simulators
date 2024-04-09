@@ -37,37 +37,37 @@ private:
 public:
      cKernels(int verbosity_);
 
-//      double dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
+     double dot(double* in1, double* in2, double* out, int N);
      double norm(double* in, double* out, int N);
-//      void axpy(cl::Buffer& in, const double a, cl::Buffer& out, int N);
-//      void scale(cl::Buffer& in, const double a, int N);
-//      void vmul(const double alpha, cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
-//      void custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N);
-//      void full_to_pressure_restriction(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb);
-//      void add_coarse_pressure_correction(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb);
-//      void prolongate_vector(const cl::Buffer& in, cl::Buffer& out, const cl::Buffer& cols, int N);
-//      void spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, const cl::Buffer& x, cl::Buffer& b, int Nb, unsigned int block_size, bool reset = true, bool add = false);
-//      void residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& x, const cl::Buffer& rhs, cl::Buffer& out, int Nb, unsigned int block_size);
+//      void axpy(double* in, const double a, double* out, int N);
+//      void scale(double* in, const double a, int N);
+//      void vmul(const double alpha, double* in1, double* in2, double* out, int N);
+     void custom(double*  p, double* v, double* r, const double omega, const double beta, int N);
+//      void full_to_pressure_restriction(const double* fine_y, double* weights, double* coarse_y, int Nb);
+//      void add_coarse_pressure_correction(double* coarse_x, double* fine_x, int pressure_idx, int Nb);
+//      void prolongate_vector(const double* in, double* out, const double* cols, int N);
+//      void spmv(double* vals, double* cols, double* rows, const double* x, double* b, int Nb, unsigned int block_size, bool reset = true, bool add = false);
+//      void residual(double* vals, double* cols, double* rows, double* x, const double* rhs, double* out, int Nb, unsigned int block_size);
 // 
-//      void ILU_apply1(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex,
-//         const cl::Buffer& y, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size);
+//      void ILU_apply1(double* rowIndices, double* vals, double* cols, double* rows, double* diagIndex,
+//         const double* y, double* x, double* rowsPerColor, int color, int Nb, unsigned int block_size);
 // 
-//      void ILU_apply2(cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows, cl::Buffer& diagIndex,
-//         cl::Buffer& invDiagVals, cl::Buffer& x, cl::Buffer& rowsPerColor, int color, int Nb, unsigned int block_size);
+//      void ILU_apply2(double* rowIndices, double* vals, double* cols, double* rows, double* diagIndex,
+//         double* invDiagVals, double* x, double* rowsPerColor, int color, int Nb, unsigned int block_size);
 // 
-//      void ILU_decomp(int firstRow, int lastRow, cl::Buffer& rowIndices, cl::Buffer& vals, cl::Buffer& cols, cl::Buffer& rows,
-//         cl::Buffer& diagIndex, cl::Buffer& invDiagVals, int Nb, unsigned int block_size);
+//      void ILU_decomp(int firstRow, int lastRow, double* rowIndices, double* vals, double* cols, double* rows,
+//         double* diagIndex, double* invDiagVals, int Nb, unsigned int block_size);
 // 
-//      void apply_stdwells(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
+//      void apply_stdwells(double* d_Cnnzs_ocl, cl::Buffer &d_Dnnzs_ocl, cl::Buffer &d_Bnnzs_ocl,
 //         cl::Buffer &d_Ccols_ocl, cl::Buffer &d_Bcols_ocl, cl::Buffer &d_x, cl::Buffer &d_y,
 //         int dim, int dim_wells, cl::Buffer &d_val_pointers_ocl, int num_std_wells);
 // 
-//      void isaiL(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& mapping, cl::Buffer& nvc,
-//             cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals, cl::Buffer& invLvals, unsigned int Nb);
+//      void isaiL(double* diagIndex, double* colPointers, double* mapping, double* nvc,
+//             double* luIdxs, double* xxIdxs, double* dxIdxs, double* LUvals, double* invLvals, unsigned int Nb);
 // 
-//      void isaiU(cl::Buffer& diagIndex, cl::Buffer& colPointers, cl::Buffer& rowIndices, cl::Buffer& mapping,
-//             cl::Buffer& nvc, cl::Buffer& luIdxs, cl::Buffer& xxIdxs, cl::Buffer& dxIdxs, cl::Buffer& LUvals,
-//             cl::Buffer& invDiagVals, cl::Buffer& invUvals, unsigned int Nb);
+//      void isaiU(double* diagIndex, double* colPointers, double* rowIndices, double* mapping,
+//             double* nvc, double* luIdxs, double* xxIdxs, double* dxIdxs, double* LUvals,
+//             double* invDiagVals, double* invUvals, unsigned int Nb);
 
 };
 

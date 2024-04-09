@@ -30,7 +30,7 @@
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
-#include <opm/simulators/linalg/bda/c/cCPR.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocsparseCPR.hpp>
 
 #include <opm/simulators/linalg/bda/Misc.hpp>//Razvan
 // #include </home/rnane/Work/bigdataccelerate/src/opm-project/builds/dune/dune-2.8/dune-istl/dune/istl/paamg/matrixhierarchy.hh>
@@ -44,79 +44,79 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-cCPR<block_size>::cCPR(int verbosity_, bool opencl_ilu_parallel_) :
-    cPreconditioner<block_size>(verbosity_)
+rocsparseCPR<block_size>::rocsparseCPR(int verbosity_, bool opencl_ilu_parallel_) :
+    rocsparsePreconditioner<block_size>(verbosity_)
 {
     opencl_ilu_parallel = opencl_ilu_parallel_;
-    bilu0 = std::make_unique<cBILU0<block_size> >(opencl_ilu_parallel, verbosity_);
+    bilu0 = std::make_unique<rocsparseBILU0<block_size> >(opencl_ilu_parallel, verbosity_);
 }
 
 template <unsigned int block_size>
-bool cCPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
-std::cout << "-----in : cCPR<block_size>::analyze_matrix(mat_)\n";
+bool rocsparseCPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
+std::cout << "-----in : rocsparseCPR<block_size>::analyze_matrix(mat_)\n";
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
-    this->N = this->Nb * block_size;
-    this->nnz = this->nnzb * block_size * block_size;
+    this->N = Nb * block_size;
+    this->nnz = nnzb * block_size * block_size;
     
     bool success = bilu0->analyze_matrix(mat_);
     
     this->mat = mat_;
-std::cout << "-----out: cCPR<block_size>::analyze_matrix(mat_)\n";
+std::cout << "-----out: rocsparseCPR<block_size>::analyze_matrix(mat_)\n";
     return success;
 }
 
 template <unsigned int block_size>
-bool cCPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
-std::cout << "-----in : cCPR<block_size>::analyze_matrix(mat_, jacMat)\n";
+bool rocsparseCPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+std::cout << "-----in : rocsparseCPR<block_size>::analyze_matrix(mat_, jacMat)\n";
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
-    this->N = this->Nb * block_size;
-    this->nnz = this->nnzb * block_size * block_size;
+    this->N = Nb * block_size;
+    this->nnz = nnzb * block_size * block_size;
 
     bool success = bilu0->analyze_matrix(mat_, jacMat);
     this->mat = mat_;
-std::cout << "-----out: cCPR<block_size>::analyze_matrix(mat_, jacMat)\n";
+std::cout << "-----out: rocsparseCPR<block_size>::analyze_matrix(mat_, jacMat)\n";
 
     return success;
 }
 
 template <unsigned int block_size>
-bool cCPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+bool rocsparseCPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_, jacMat);
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "cCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        out << "rocsparseCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
         OpmLog::info(out.str());
     }
 
     Dune::Timer t_amg;
     this->create_preconditioner_amg(this->mat); // already points to bilu0::rmat if needed
-    
+
     //init_data_transfers();--->TODO-Razvan: factor out below code to this method
     // initialize cMatrices and Buffers if needed
-    auto init_func = std::bind(&cCPR::init_c_buffers, this);
-    std::call_once(c_buffers_allocated, init_func);
+    auto init_func = std::bind(&rocsparseCPR::init_rocm_buffers, this);
+    std::call_once(rocm_buffers_allocated, init_func);
 
     // upload matrices and vectors to GPU
-    c_upload();
-   
+    rocm_upload();
+
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "cCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        out << "rocsparseCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
     return result;
 }
 
 template <unsigned int block_size>
-bool cCPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
+bool rocsparseCPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_);
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "cCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        out << "rocsparseCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -125,22 +125,22 @@ bool cCPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     
     //init_data_transfers();--->TODO-Razvan: factor out below code to this method
     // initialize cMatrices and Buffers if needed
-    auto init_func = std::bind(&cCPR::init_c_buffers, this);
-    std::call_once(c_buffers_allocated, init_func);
+    auto init_func = std::bind(&rocsparseCPR::init_rocm_buffers, this);
+    std::call_once(rocm_buffers_allocated, init_func);
 
     // upload matrices and vectors to GPU
-    c_upload();
-
+    rocm_upload();
+    
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "cCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        out << "rocsparseCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
     return result;
 }
 
 template <unsigned int block_size>
-void cCPR<block_size>::init_c_buffers() {
+void rocsparseCPR<block_size>::init_rocm_buffers() {
 //     d_Amatrices.reserve(this->num_levels);
 //     d_Rmatrices.reserve(this->num_levels - 1);
 //     d_invDiags.reserve(this->num_levels - 1);
@@ -165,7 +165,8 @@ void cCPR<block_size>::init_c_buffers() {
 
 
 template <unsigned int block_size>
-void cCPR<block_size>::c_upload() {
+void rocsparseCPR<block_size>::rocm_upload() {
+//     HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
 //     d_mat->upload(queue.get(), this->mat);
 // 
 //     err = CL_SUCCESS;
@@ -189,8 +190,7 @@ void cCPR<block_size>::c_upload() {
 }
 
 template <unsigned int block_size>
-void cCPR<block_size>::amg_cycle_gpu(const int level, double &y, double &x) {
-std::cout << " ----> do we get here???\n";//Razvan
+void rocsparseCPR<block_size>::amg_cycle_gpu(const int level, double &y, double &x) {
     cMatrix *A = &d_Amatrices[level];
     cMatrix *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
@@ -199,9 +199,30 @@ std::cout << " ----> do we get here???\n";//Razvan
         // solve coarsest level
         std::vector<double> h_y(Ncur), h_x(Ncur, 0);
 
+//TODO-Razvan: implement the transfer of the y vector to host side!
+// HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
+//         events.resize(1);
+//         err = queue->enqueueReadBuffer(y, CL_FALSE, 0, sizeof(double) * Ncur, h_y.data(), nullptr, &events[0]);
+//         cl::WaitForEvents(events);
+//         events.clear();
+//         if (err != CL_SUCCESS) {
+//             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+//             OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueReadBuffer error");
+//         }
+        
         // solve coarsest level using umfpack
         this->umfpack.apply(h_x.data(), h_y.data());
 
+//TODO-Razvan: implement the transfer of the y vector to gpu side!
+//         events.resize(1);
+//         err = queue->enqueueWriteBuffer(x, CL_FALSE, 0, sizeof(double) * Ncur, h_x.data(), nullptr, &events[0]);
+//         cl::WaitForEvents(events);
+//         events.clear();
+//         if (err != CL_SUCCESS) {
+//             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+//             OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueWriteBuffer error");
+//         }
+        
         return;
     }
     int Nnext = d_Amatrices[level+1].Nb;
@@ -233,7 +254,20 @@ std::cout << " ----> do we get here???\n";//Razvan
 
 // x = prec(y)
 template <unsigned int block_size>
-void cCPR<block_size>::apply_amg(const double& y, double& x) {
+void rocsparseCPR<block_size>::apply_amg(const double& y, double& x) {
+//     // 0-initialize u and x vectors --> TODO-Razvan: implement this in rocsparse/HIP
+//     events.resize(d_u.size() + 1);
+//     err = queue->enqueueFillBuffer(*d_coarse_x, 0, 0, sizeof(double) * this->Nb, nullptr, &events[0]);
+// 
+//     for (unsigned int i = 0; i < d_u.size(); ++i) {
+//         err |= queue->enqueueFillBuffer(d_u[i], 0, 0, sizeof(double) * this->Rmatrices[i].N, nullptr, &events[i + 1]);
+//     }
+//     cl::WaitForEvents(events);
+//     events.clear();
+//     if (err != CL_SUCCESS) {
+//         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+//         OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
+//     }
 
     std::cout << " TODO: OpenclKernels::residual(mat->nnzValues, mat->colIndices, mat->rowPointers, x, y, *rs, Nb, block_size);\n";
     std::cout << " TODO: OpenclKernels::full_to_pressure_restriction(*rs, *weights, *coarse_y, Nb);\n";
@@ -247,12 +281,12 @@ void cCPR<block_size>::apply_amg(const double& y, double& x) {
 }
 
 template <unsigned int block_size>
-void cCPR<block_size>::apply(double& y, double& x) {
+void rocsparseCPR<block_size>::apply(double& y, double& x) {
     Dune::Timer t_bilu0;
     bilu0->apply(y, x);
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "cCPR apply bilu0(): " << t_bilu0.stop() << " s";
+        out << "rocsparseCPR apply bilu0(): " << t_bilu0.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -260,14 +294,14 @@ void cCPR<block_size>::apply(double& y, double& x) {
     apply_amg(y, x);
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "cCPR apply amg(): " << t_amg.stop() << " s";
+        out << "rocsparseCPR apply amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
 }
 
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template class cCPR<n>;
+template class rocsparseCPR<n>;
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

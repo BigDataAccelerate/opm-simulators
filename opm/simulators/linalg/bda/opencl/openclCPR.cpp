@@ -51,7 +51,6 @@ openclCPR<block_size>::openclCPR(int verbosity_, bool opencl_ilu_parallel_) :
 {
     opencl_ilu_parallel = opencl_ilu_parallel_;
     bilu0 = std::make_unique<openclBILU0<block_size> >(opencl_ilu_parallel, verbosity_);
-    diagIndices.resize(1);
 }
 
 
@@ -71,12 +70,12 @@ bool openclCPR<block_size>::analyze_matrix(BlockedMatrix *mat_)
 // std::cout << "-----in : openclCPR<block_size>::analyze_matrix(BlockedMatrix *mat_) \n";
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
-    this->N = Nb * block_size;
-    this->nnz = nnzb * block_size * block_size;
+    this->N = this->Nb * block_size;
+    this->nnz = this->nnzb * block_size * block_size;
 
     bool success = bilu0->analyze_matrix(mat_);
 // std::cout << " after bilu0->analyze_matrix(mat_); in openclCPR::analyze_matrix(..) -- 1 \n";
-    mat = mat_;
+    this->mat = mat_;
     return success;
 }
 
@@ -86,12 +85,12 @@ bool openclCPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *j
 // std::cout << "-----in : openclCPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) \n";
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
-    this->N = Nb * block_size;
-    this->nnz = nnzb * block_size * block_size;
+    this->N = this->Nb * block_size;
+    this->nnz = this->nnzb * block_size * block_size;
 
     bool success = bilu0->analyze_matrix(mat_, jacMat);
 // std::cout << " after bilu0->analyze_matrix(mat_); in openclCPR::analyze_matrix(..) -- 2 \n";
-    mat = mat_;
+    this->mat = mat_;
 
     return success;
 }
@@ -107,12 +106,21 @@ bool openclCPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMa
     }
 
     Dune::Timer t_amg;
-    create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
+    this->create_preconditioner_amg(this->mat); // already points to bilu0::rmat if needed
+    
+    // initialize OpenclMatrices and Buffers if needed
+    auto init_func = std::bind(&openclCPR::init_opencl_buffers, this);
+    std::call_once(opencl_buffers_allocated, init_func);
+
+    // upload matrices and vectors to GPU
+    opencl_upload();
+
     if (verbosity >= 3) {
         std::ostringstream out;
         out << "openclCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
     }
+    std::cout << "out: openclCPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) .... exiting\n";exit(0);//Razvan
     return result;
 }
 
@@ -127,7 +135,15 @@ bool openclCPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
     }
 
     Dune::Timer t_amg;
-    create_preconditioner_amg(mat); // already points to bilu0::rmat if needed
+    this->create_preconditioner_amg(this->mat); // already points to bilu0::rmat if needed
+    
+    // initialize OpenclMatrices and Buffers if needed
+    auto init_func = std::bind(&openclCPR::init_opencl_buffers, this);
+    std::call_once(opencl_buffers_allocated, init_func);
+
+    // upload matrices and vectors to GPU
+    opencl_upload();
+    
     if (verbosity >= 3) {
         std::ostringstream out;
         out << "openclCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
@@ -138,13 +154,13 @@ bool openclCPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
 
 template <unsigned int block_size>
 void openclCPR<block_size>::init_opencl_buffers() {
-    d_Amatrices.reserve(num_levels);
-    d_Rmatrices.reserve(num_levels - 1);
-    d_invDiags.reserve(num_levels - 1);
-    for (Matrix& m : Amatrices) {
+    d_Amatrices.reserve(this->num_levels);
+    d_Rmatrices.reserve(this->num_levels - 1);
+    d_invDiags.reserve(this->num_levels - 1);
+    for (Matrix& m : this->Amatrices) {
         d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
     }
-    for (Matrix& m : Rmatrices) {
+    for (Matrix& m : this->Rmatrices) {
         d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
         d_f.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
         d_u.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
@@ -153,26 +169,26 @@ void openclCPR<block_size>::init_opencl_buffers() {
         d_invDiags.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.M); // create a cl::Buffer
         d_t.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.M);
     }
-    d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-    d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-    d_mat = std::make_unique<OpenclMatrix>(context.get(), Nb, Nb, nnzb, block_size);
-    d_coarse_y = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
-    d_coarse_x = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
+    d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->N);
+    d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->N);
+    d_mat = std::make_unique<OpenclMatrix>(context.get(), this->Nb, this->Nb, this->nnzb, block_size);
+    d_coarse_y = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->Nb);
+    d_coarse_x = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->Nb);
 }
 
 
 template <unsigned int block_size>
 void openclCPR<block_size>::opencl_upload() {
-    d_mat->upload(queue.get(), mat);
+    d_mat->upload(queue.get(), this->mat);
 
     err = CL_SUCCESS;
-    events.resize(2 * Rmatrices.size() + 1);
-    err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * N, weights.data(), nullptr, &events[0]);
-    for (unsigned int i = 0; i < Rmatrices.size(); ++i) {
-        d_Amatrices[i].upload(queue.get(), &Amatrices[i]);
+    events.resize(2 * this->Rmatrices.size() + 1);
+    err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * this->N, this->weights.data(), nullptr, &events[0]);
+    for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
+        d_Amatrices[i].upload(queue.get(), &this->Amatrices[i]);
 
-        err |= queue->enqueueWriteBuffer(d_invDiags[i], CL_FALSE, 0, sizeof(double) * Amatrices[i].N, invDiags[i].data(), nullptr, &events[2*i+1]);
-        err |= queue->enqueueWriteBuffer(d_PcolIndices[i], CL_FALSE, 0, sizeof(int) * Amatrices[i].N, PcolIndices[i].data(), nullptr, &events[2*i+2]);
+        err |= queue->enqueueWriteBuffer(d_invDiags[i], CL_FALSE, 0, sizeof(double) * this->Amatrices[i].N, this->invDiags[i].data(), nullptr, &events[2*i+1]);
+        err |= queue->enqueueWriteBuffer(d_PcolIndices[i], CL_FALSE, 0, sizeof(int) * this->Amatrices[i].N, this->PcolIndices[i].data(), nullptr, &events[2*i+2]);
     }
     cl::WaitForEvents(events);
     events.clear();
@@ -180,244 +196,10 @@ void openclCPR<block_size>::opencl_upload() {
         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
         OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueWriteBuffer error");
     }
-    for (unsigned int i = 0; i < Rmatrices.size(); ++i) {
-        d_Rmatrices[i].upload(queue.get(), &Rmatrices[i]);
+    for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
+        d_Rmatrices[i].upload(queue.get(), &this->Rmatrices[i]);
     }
 }
-
-
-template <unsigned int block_size>
-void openclCPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
-    this->mat = mat_;
-
-    coarse_vals.resize(nnzb);
-    coarse_x.resize(Nb);
-    coarse_y.resize(Nb);
-    weights.resize(N);
-
-    try{
-        double rhs[] = {0, 0, 0};
-        rhs[pressure_idx] = 1;
-
-        // find diagonal index for each row
-        if (diagIndices[0].empty()) {
-            diagIndices[0].resize(Nb);
-            for (int row = 0; row < Nb; ++row) {
-                int start = mat->rowPointers[row];
-                int end = mat->rowPointers[row + 1];
-                auto candidate = std::find(mat->colIndices + start, mat->colIndices + end, row);
-                assert(candidate != mat->colIndices + end);
-                diagIndices[0][row] = candidate - mat->colIndices;
-            }
-        }
-
-        // calculate weights for each row
-        for (int row = 0; row < Nb; ++row) {
-            // solve to find weights
-            double *row_weights = weights.data() + block_size * row; // weights for this row
-            solve_transposed_3x3(mat->nnzValues + block_size * block_size * diagIndices[0][row], rhs, row_weights);
-
-            // normalize weights for this row
-            double abs_max = get_absmax(row_weights, block_size);
-            for(unsigned int i = 0; i < block_size; i++){
-                row_weights[i] /= abs_max;
-            }
-        }
-
-        // extract pressure
-        // transform blocks to scalars to create scalar linear system
-        for (int row = 0; row < Nb; ++row) {
-            int start = mat->rowPointers[row];
-            int end = mat->rowPointers[row + 1];
-            for (int idx = start; idx < end; ++idx) {
-                double *block = mat->nnzValues + idx * block_size * block_size;
-                double *row_weights = weights.data() + block_size * row;
-                double value = 0.0;
-                for (unsigned int i = 0; i < block_size; ++i) {
-                    value += block[block_size * i + pressure_idx] * row_weights[i];
-                }
-                coarse_vals[idx] = value;
-            }
-        }
-
-#if HAVE_MPI
-        using Communication = Dune::OwnerOverlapCopyCommunication<int, int>;
-#else
-        using Communication = Dune::Amg::SequentialInformation;
-#endif
-        using OverlapFlags = Dune::NegateSet<Communication::OwnerSet>;
-        if (recalculate_aggregates) {
-            dune_coarse = std::make_unique<DuneMat>(Nb, Nb, nnzb, DuneMat::row_wise);
-
-            typedef DuneMat::CreateIterator Iter;
-
-            // setup sparsity pattern
-            for(Iter row = dune_coarse->createbegin(); row != dune_coarse->createend(); ++row){
-                int start = mat->rowPointers[row.index()];
-                int end = mat->rowPointers[row.index() + 1];
-                for (int idx = start; idx < end; ++idx) {
-                    int col = mat->colIndices[idx];
-                    row.insert(col);
-                }
-            }
-
-            // set values
-            for (int row = 0; row < Nb; ++row) {
-                int start = mat->rowPointers[row];
-                int end = mat->rowPointers[row + 1];
-                for (int idx = start; idx < end; ++idx) {
-                    int col = mat->colIndices[idx];
-                    (*dune_coarse)[row][col] = coarse_vals[idx];
-                }
-            }
-
-            dune_op = std::make_shared<MatrixOperator>(*dune_coarse);
-            Dune::Amg::SequentialInformation seqinfo;
-            dune_amg = std::make_unique<DuneAmg>(dune_op, Dune::stackobject_to_shared_ptr(seqinfo));
-
-            Opm::PropertyTree property_tree;
-            property_tree.put("alpha", 0.333333333333);
-
-            // The matrix has a symmetric sparsity pattern, but the values are not symmetric
-            // Yet a SymmetricDependency is used in AMGCPR
-            // An UnSymmetricCriterion is also available
-            // using Criterion = Dune::Amg::CoarsenCriterion<Dune::Amg::UnSymmetricCriterion<DuneMat, Dune::Amg::FirstDiagonal> >;
-            using CriterionBase = Dune::Amg::AggregationCriterion<Dune::Amg::SymmetricDependency<DuneMat, Dune::Amg::FirstDiagonal>>;
-            using Criterion = Dune::Amg::CoarsenCriterion<CriterionBase>;
-            const Criterion c = Opm::AMGHelper<MatrixOperator,Dune::Amg::SequentialInformation,DuneMat,DuneVec>::criterion(property_tree);
-            num_pre_smooth_steps = c.getNoPreSmoothSteps();
-            num_post_smooth_steps = c.getNoPostSmoothSteps();
-
-            dune_amg->build<OverlapFlags>(c);
-
-            analyzeHierarchy();
-            analyzeAggregateMaps();
-
-            recalculate_aggregates = false;
-        } else {
-            // update values of coarsest level in AMG
-            // this works because that level is actually a reference to the DuneMat held by dune_coarse
-            for (int row = 0; row < Nb; ++row) {
-                int start = mat->rowPointers[row];
-                int end = mat->rowPointers[row + 1];
-                for (int idx = start; idx < end; ++idx) {
-                    int col = mat->colIndices[idx];
-                    (*dune_coarse)[row][col] = coarse_vals[idx];
-                }
-            }
-
-            // update the rest of the AMG hierarchy
-            dune_amg->recalculateGalerkin(OverlapFlags());
-            analyzeHierarchy();
-        }
-
-        // initialize OpenclMatrices and Buffers if needed
-        auto init_func = std::bind(&openclCPR::init_opencl_buffers, this);
-        std::call_once(opencl_buffers_allocated, init_func);
-
-        // upload matrices and vectors to GPU
-        opencl_upload();
-
-    } catch (const std::exception& ex) {
-        std::cerr << "Caught exception: " << ex.what() << std::endl;
-        throw ex;
-    }
-}
-
-template <unsigned int block_size>
-void openclCPR<block_size>::analyzeHierarchy() {
-    const DuneAmg::ParallelMatrixHierarchy& matrixHierarchy = dune_amg->matrices();
-
-    // store coarsest AMG level in umfpack format, also performs LU decomposition
-    umfpack.setMatrix((*matrixHierarchy.coarsest()).getmat());
-
-    num_levels = dune_amg->levels();
-    level_sizes.resize(num_levels);
-    diagIndices.resize(num_levels);
-
-    Amatrices.reserve(num_levels);
-    Rmatrices.reserve(num_levels - 1);  // coarsest level does not need one
-    invDiags.reserve(num_levels);
-
-    Amatrices.clear();
-    invDiags.clear();
-
-    // matrixIter.dereference() returns MatrixAdapter
-    // matrixIter.dereference().getmat() returns BCRSMat
-    DuneAmg::ParallelMatrixHierarchy::ConstIterator matrixIter = matrixHierarchy.finest();
-    for(int level = 0; level < num_levels; ++matrixIter, ++level) {
-        const auto& A = matrixIter.dereference().getmat();
-        level_sizes[level] = A.N();
-        diagIndices[level].reserve(A.N());
-
-        // extract matrix A
-        Amatrices.emplace_back(A.N(), A.nonzeroes());
-        // contiguous copy is not possible
-        // std::copy(&(A[0][0][0][0]), &(A[0][0][0][0]) + A.nonzeroes(), Amatrices.back().nnzValues.data());
-        // also update diagonal indices if needed, level 0 is already filled in create_preconditioner()
-        int nnz_idx = 0;
-        const bool fillDiagIndices = diagIndices[level].empty();
-        for (typename DuneMat::const_iterator r = A.begin(); r != A.end(); ++r) {
-            for (auto c = r->begin(); c != r->end(); ++c) {
-                Amatrices.back().nnzValues[nnz_idx] = A[r.index()][c.index()];
-                if (fillDiagIndices && r.index() == c.index()) {
-                    diagIndices[level].emplace_back(nnz_idx);
-                }
-                nnz_idx++;
-            }
-        }
-
-        Opm::BdaBridge<DuneMat, DuneVec, 1>::copySparsityPatternFromISTL(A, Amatrices.back().rowPointers, Amatrices.back().colIndices);
-
-        // compute inverse diagonal values for current level
-        invDiags.emplace_back(A.N());
-        for (unsigned int row = 0; row < A.N(); ++row) {
-            invDiags.back()[row] = 1 / Amatrices.back().nnzValues[diagIndices[level][row]];
-        }
-    }
-}
-
-
-template <unsigned int block_size>
-void openclCPR<block_size>::analyzeAggregateMaps() {
-
-    PcolIndices.resize(num_levels - 1);
-    Rmatrices.clear();
-
-    const DuneAmg::AggregatesMapList& aggregatesMaps = dune_amg->aggregatesMaps();
-
-    DuneAmg::AggregatesMapList::const_iterator mapIter = aggregatesMaps.begin();
-    for(int level = 0; level < num_levels - 1; ++mapIter, ++level) {
-        DuneAmg::AggregatesMap *map = *mapIter;
-
-        Rmatrices.emplace_back(level_sizes[level+1], level_sizes[level], level_sizes[level]);
-        std::fill(Rmatrices.back().nnzValues.begin(), Rmatrices.back().nnzValues.end(), 1.0);
-
-        // get indices for each row of P and R
-        std::vector<std::vector<unsigned> > indicesR(level_sizes[level+1]);
-        PcolIndices[level].resize(level_sizes[level]);
-
-        using AggregateIterator = DuneAmg::AggregatesMap::const_iterator;
-        for(AggregateIterator ai = map->begin(); ai != map->end(); ++ai){
-            if (*ai != DuneAmg::AggregatesMap::ISOLATED) {
-                const long int diff = ai - map->begin();
-                PcolIndices[level][diff] = *ai;
-                indicesR[*ai].emplace_back(diff);
-            }
-        }
-
-        int col_idx = 0;
-        // set sparsity pattern of R
-        Rmatrices.back().rowPointers[0] = 0;
-        for (unsigned int i = 0; i < indicesR.size(); ++i) {
-            Rmatrices.back().rowPointers[i + 1] = Rmatrices.back().rowPointers[i] + indicesR[i].size();
-            for (auto it = indicesR[i].begin(); it != indicesR[i].end(); ++it) {
-                Rmatrices.back().colIndices[col_idx++] = *it;
-            }
-        }
-    }
-}
-
 
 template <unsigned int block_size>
 void openclCPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x) {
@@ -425,7 +207,7 @@ void openclCPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Bu
     OpenclMatrix *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
 
-    if (level == num_levels - 1) {
+    if (level == this->num_levels - 1) {
         // solve coarsest level
         std::vector<double> h_y(Ncur), h_x(Ncur, 0);
 
@@ -439,7 +221,7 @@ void openclCPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Bu
         }
 
         // solve coarsest level using umfpack
-        umfpack.apply(h_x.data(), h_y.data());
+        this->umfpack.apply(h_x.data(), h_y.data());
 
         events.resize(1);
         err = queue->enqueueWriteBuffer(x, CL_FALSE, 0, sizeof(double) * Ncur, h_x.data(), nullptr, &events[0]);
@@ -459,7 +241,7 @@ void openclCPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Bu
 
     // presmooth
     double jacobi_damping = 0.65; // default value in amgcl: 0.72
-    for (unsigned i = 0; i < num_pre_smooth_steps; ++i){
+    for (unsigned i = 0; i < this->num_pre_smooth_steps; ++i){
         OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
         OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
     }
@@ -471,7 +253,7 @@ void openclCPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Bu
     OpenclKernels::prolongate_vector(u, x, d_PcolIndices[level], Ncur);
 
     // postsmooth
-    for (unsigned i = 0; i < num_post_smooth_steps; ++i){
+    for (unsigned i = 0; i < this->num_post_smooth_steps; ++i){
         OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
         OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
     }
@@ -483,9 +265,10 @@ template <unsigned int block_size>
 void openclCPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
     // 0-initialize u and x vectors
     events.resize(d_u.size() + 1);
-    err = queue->enqueueFillBuffer(*d_coarse_x, 0, 0, sizeof(double) * Nb, nullptr, &events[0]);
+    err = queue->enqueueFillBuffer(*d_coarse_x, 0, 0, sizeof(double) * this->Nb, nullptr, &events[0]);
+
     for (unsigned int i = 0; i < d_u.size(); ++i) {
-        err |= queue->enqueueFillBuffer(d_u[i], 0, 0, sizeof(double) * Rmatrices[i].N, nullptr, &events[i + 1]);
+        err |= queue->enqueueFillBuffer(d_u[i], 0, 0, sizeof(double) * this->Rmatrices[i].N, nullptr, &events[i + 1]);
     }
     cl::WaitForEvents(events);
     events.clear();
@@ -493,13 +276,13 @@ void openclCPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
         OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
     }
-
-    OpenclKernels::residual(d_mat->nnzValues, d_mat->colIndices, d_mat->rowPointers, x, y, *d_rs, Nb, block_size);
-    OpenclKernels::full_to_pressure_restriction(*d_rs, *d_weights, *d_coarse_y, Nb);
-
+    
+    OpenclKernels::residual(d_mat->nnzValues, d_mat->colIndices, d_mat->rowPointers, x, y, *d_rs, this->Nb, block_size);
+    OpenclKernels::full_to_pressure_restriction(*d_rs, *d_weights, *d_coarse_y, this->Nb);
+    
     amg_cycle_gpu(0, *d_coarse_y, *d_coarse_x);
 
-    OpenclKernels::add_coarse_pressure_correction(*d_coarse_x, x, pressure_idx, Nb);
+    OpenclKernels::add_coarse_pressure_correction(*d_coarse_x, x, this->pressure_idx, this->Nb);
 }
 
 template <unsigned int block_size>
@@ -511,7 +294,7 @@ void openclCPR<block_size>::apply(const cl::Buffer& y, cl::Buffer& x) {
         out << "openclCPR apply bilu0(): " << t_bilu0.stop() << " s";
         OpmLog::info(out.str());
     }
-
+    
     Dune::Timer t_amg;
     apply_amg(y, x);
     if (verbosity >= 4) {

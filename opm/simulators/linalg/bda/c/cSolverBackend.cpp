@@ -106,7 +106,7 @@ std::cout << "---in : cSolverBackend<block_size>::gpu_pbicgstab(wellContribs, re
     alpha = 1.0;
     omega = 1.0;
 
-    d_r = d_b; //queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &events[2]);
+    d_r = h_b; //queue->enqueueCopyBuffer(d_b, d_r, 0, 0, sizeof(double) * N, nullptr, &events[2]);
     d_rw = d_r; //queue->enqueueCopyBuffer(d_r, d_rw, 0, 0, sizeof(double) * N, nullptr, &events[3]);
     d_p = d_r; //queue->enqueueCopyBuffer(d_r, d_p, 0, 0, sizeof(double) * N, nullptr, &events[4]);
     
@@ -119,31 +119,32 @@ std::cout << "---in : cSolverBackend<block_size>::gpu_pbicgstab(wellContribs, re
         OpmLog::info(out.str());
     }
 
-//     if (verbosity >= 3) {
-//         t_rest.start();
-//     }
-//     for (it = 0.5; it < maxit; it += 0.5) {
-//         rhop = rho;
-//         rho = OpenclKernels::dot(d_rw, d_r, d_tmp, N);
-// 
-//         if (it > 1) {
-//             beta = (rho / rhop) * (alpha / omega);
-//             OpenclKernels::custom(d_p, d_v, d_r, omega, beta, N);
-//         }
-//         if (verbosity >= 3) {
-//             queue->finish();
-//             t_rest.stop();
-//             t_prec.start();
-//         }
-// 
-//         // pw = prec(p)
-//         prec->apply(d_p, d_pw);
-//         if (verbosity >= 3) {
-//             queue->finish();
-//             t_prec.stop();
-//             t_spmv.start();
-//         }
-// 
+    if (verbosity >= 3) {
+        t_rest.start();
+    }
+    
+    for (it = 0.5; it < maxit; it += 0.5) {
+        rhop = rho;
+        rho = ckernels->dot(d_rw, d_r, d_tmp, N);
+
+        if (it > 1) {
+            beta = (rho / rhop) * (alpha / omega);
+            /// p = (p - omega * v) * beta + r
+            ckernels->custom(d_p, d_v, d_r, omega, beta, N);
+        }
+        if (verbosity >= 3) {
+            t_rest.stop();
+            t_prec.start();
+        }
+
+        // pw = prec(p)
+        prec->apply(*d_p, *d_pw);
+        if (verbosity >= 3) {
+            t_prec.stop();
+            t_spmv.start();
+        }
+std::cout << "exiting after prec(p) in bicgstab solver\n";exit(0);
+    }
 //         // v = A * pw
 //         OpenclKernels::spmv(d_Avals, d_Acols, d_Arows, d_pw, d_v, Nb, block_size);
 //         if (verbosity >= 3) {

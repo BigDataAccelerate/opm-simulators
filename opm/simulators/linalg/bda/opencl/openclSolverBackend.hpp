@@ -32,7 +32,7 @@ namespace Opm
 namespace Accelerator
 {
 
-/// This class implements a opencl-based ilu0-bicgstab solver on GPU
+/// This class implements a opencl-based ilu0|cpr-bicgstab solver on GPU
 template <unsigned int block_size>
 class openclSolverBackend : public BdaSolver<block_size>
 {

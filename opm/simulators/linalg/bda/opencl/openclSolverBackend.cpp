@@ -82,7 +82,7 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
             OPM_THROW(std::logic_error, "Error openclSolver is selected but no OpenCL platforms are found");
         }
         out << "Found " << platforms.size() << " OpenCL platforms" << "\n";
-
+            
         if (verbosity >= 1) {
             std::string platform_info;
             for (unsigned int i = 0; i < platforms.size(); ++i) {
@@ -272,6 +272,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
         out << std::scientific << "openclSolver initial norm: " << norm_0;
         OpmLog::info(out.str());
     }
+// openclSolver initial norm: 3.381485e+01
 
     if (verbosity >= 3) {
         t_rest.start();
@@ -282,6 +283,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
 
         if (it > 1) {
             beta = (rho / rhop) * (alpha / omega);
+            /// p = (p - omega * v) * beta + r
             OpenclKernels::custom(d_p, d_v, d_r, omega, beta, N);
         }
         if (verbosity >= 3) {
@@ -289,7 +291,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_rest.stop();
             t_prec.start();
         }
-
+       
         // pw = prec(p)
         prec->apply(d_p, d_pw);
         if (verbosity >= 3) {
@@ -297,6 +299,7 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
             t_prec.stop();
             t_spmv.start();
         }
+std::cout << "exiting after prec->apply in bicgstab solver\n";exit(0);
 
         // v = A * pw
         OpenclKernels::spmv(d_Avals, d_Acols, d_Arows, d_pw, d_v, Nb, block_size);

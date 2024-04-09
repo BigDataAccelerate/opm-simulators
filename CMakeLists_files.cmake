@@ -205,6 +205,7 @@ if(USE_BDA_BRIDGE)
                                  opm/simulators/linalg/ISTLSolverEbosBda.cpp
                                  opm/simulators/linalg/bda/Reorder.cpp
                                  opm/simulators/linalg/bda/Misc.cpp
+                                 opm/simulators/linalg/bda/CprCreation.cpp
                                  opm/simulators/linalg/bda/c/cKernels.cpp
                                  opm/simulators/linalg/bda/c/cCPR.cpp
                                  opm/simulators/linalg/bda/c/cBILU0.cpp
@@ -228,6 +229,9 @@ if(USE_BDA_BRIDGE)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.cpp)
   endif()
  if(rocsparse_FOUND AND rocblas_FOUND)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseCPR.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseBILU0.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseWellContributions.cpp)
  endif()
@@ -490,7 +494,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
   opm/simulators/linalg/bda/opencl/openclBISAI.hpp
-  opm/simulators/linalg/bda/Misc.cpp
+  opm/simulators/linalg/bda/Misc.hpp
+  opm/simulators/linalg/bda/CprCreation.hpp
   opm/simulators/linalg/bda/Reorder.hpp
   opm/simulators/linalg/bda/c/cKernels.hpp
   opm/simulators/linalg/bda/c/cMatrix.hpp
@@ -505,8 +510,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp
   opm/simulators/linalg/bda/opencl/openclWellContributions.hpp
   opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.hpp
+  opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.hpp
   opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp
   opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp
+  opm/simulators/linalg/bda/rocm/rocsparseBILU0.hpp
+  opm/simulators/linalg/bda/rocm/rocsparseCPR.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/DILU.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh

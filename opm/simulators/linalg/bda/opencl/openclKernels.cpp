@@ -30,6 +30,8 @@
 
 #include <opm/simulators/linalg/bda/Misc.hpp>
 
+#include <iostream> //Razvan to delete
+
 namespace Opm
 {
 namespace Accelerator
@@ -106,7 +108,29 @@ void OpenclKernels::init(cl::Context *context, cl::CommandQueue *queue_, std::ve
     sources.emplace_back(isaiU_str);
 
     cl::Program program = cl::Program(*context, sources);
-    program.build(devices);
+
+    try {
+        program.build(devices);
+    } 
+    catch (const cl::Error& e) {
+        if (e.err() == CL_BUILD_PROGRAM_FAILURE)
+        {
+            for (cl::Device dev : devices)
+            {
+                // Check the build status
+                cl_build_status status = program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(dev);
+                if (status != CL_BUILD_ERROR)
+                    continue;
+
+                // Get the build log
+                std::string name     = dev.getInfo<CL_DEVICE_NAME>();
+                std::string buildlog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(dev);
+                std::cerr << "Build log for " << name << ":" << std::endl
+                            << buildlog << std::endl;
+            }
+        }
+        throw e;
+    }
 
     // queue.enqueueNDRangeKernel() is a blocking/synchronous call, at least for NVIDIA
     // cl::KernelFunctor<> myKernel(); myKernel(args, arg1, arg2); is also blocking
@@ -166,7 +190,7 @@ double OpenclKernels::dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int
         oss << std::scientific << "OpenclKernels dot() time: " << t_dot.stop() << " s";
         OpmLog::info(oss.str());
     }
-
+std::cout << "    dot->gpu_sum = " << gpu_sum << std::endl;
     return gpu_sum;
 }
 
@@ -223,8 +247,16 @@ void OpenclKernels::scale(cl::Buffer& in, const double a, int N)
     const unsigned int total_work_items = num_work_groups * work_group_size;
     Timer t_scale;
 
+tmp.resize(N);
+    
+queue->enqueueReadBuffer(in, CL_TRUE, 0, sizeof(double) * N, tmp.data());
+std::cout << "   before:   in[0] = " << tmp[0] << std::endl;
+
     cl::Event event = (*scale_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, a, N);
 
+queue->enqueueReadBuffer(in, CL_TRUE, 0, sizeof(double) * N, tmp.data());
+std::cout << "   after:    in[0] = " << tmp[0] << std::endl;
+    
     if (verbosity >= 4) {
         event.wait();
         std::ostringstream oss;
@@ -258,7 +290,16 @@ void OpenclKernels::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r,
     const unsigned int total_work_items = num_work_groups * work_group_size;
     Timer t_custom;
 
+    tmp.resize(num_work_groups);
+
+    queue->enqueueReadBuffer(p, CL_TRUE, 0, sizeof(double) * num_work_groups, tmp.data());
+std::cout << " BEFORE:  p[0] = " << tmp[0] << std::endl;
+
+
     cl::Event event = (*custom_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), p, v, r, omega, beta, N);
+
+    queue->enqueueReadBuffer(p, CL_TRUE, 0, sizeof(double) * num_work_groups, tmp.data());
+std::cout << " AFTER:  p[0] = " << tmp[0] << std::endl;
 
     if (verbosity >= 4) {
         event.wait();

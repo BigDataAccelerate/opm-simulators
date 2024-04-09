@@ -276,6 +276,13 @@ void openclBILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     const double relaxation = 0.9;
     cl::Event event;
     Timer t_apply;
+    
+std::vector<double> tmp;
+tmp.resize(N);
+queue->enqueueReadBuffer(x, CL_TRUE, 0, sizeof(double) * N, tmp.data());
+std::cout << "   before:   x[3] = " << tmp[3] << std::endl;
+
+std::cout << "in openclBILU0<block_size>::apply ---> x[0] = " << tmp[0] << std::endl;
 
     for (int color = 0; color < numColors; ++color) {
 #if CHOW_PATEL
@@ -301,9 +308,13 @@ void openclBILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 #endif
     }
 
+queue->enqueueReadBuffer(x, CL_TRUE, 0, sizeof(double) * N, tmp.data());
+std::cout << "   after:   x[3] = " << tmp[3] << std::endl;
+
     // apply relaxation
     OpenclKernels::scale(x, relaxation, N);
 
+// std::cout << "exiting in prec->apply in openclBILU0\n";exit(0);
     if (verbosity >= 4) {
         std::ostringstream out;
         out << "openclBILU0 apply: " << t_apply.stop() << " s";
