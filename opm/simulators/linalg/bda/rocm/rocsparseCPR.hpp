@@ -64,7 +64,7 @@ private:
     std::unique_ptr<rocsparseBILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
 
     std::unique_ptr<rocsparseSolverBackend<1> > coarse_solver; // coarse solver is scalar
-    bool opencl_ilu_parallel;                   // whether ILU0 operation should be parallelized
+//     bool opencl_ilu_parallel;                   // whether ILU0 operation should be parallelized
 
     // Initialize and allocate matrices and vectors
     void init_rocm_buffers();//TODO: rename to rocm/c and update in code
@@ -79,7 +79,21 @@ private:
 
 public:
 
-    rocsparseCPR(int verbosity, bool opencl_ilu_parallel);
+    rocsparseCPR(int verbosity);
+
+    bool initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix, rocsparse_int *d_Arows, rocsparse_int *d_Acols);
+    
+    void copy_system_to_gpu(double *b);
+
+    /// Reassign pointers, in case the addresses of the Dune variables have changed
+    /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
+    /// \param[in] b              input vector b, contains N values
+//     void update_system(double *vals, double *b);
+
+    /// Update linear system to GPU
+    /// \param[in] b              input vector, contains N values
+    void update_system_on_gpu(double *b);
+
 
     bool analyze_matrix(BlockedMatrix *mat);
     bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);
@@ -95,11 +109,6 @@ public:
     // also applies amg for pressure component
     void apply(double& y, double& x);
 };
-
-// solve A^T * x = b
-// A should represent a 3x3 matrix
-// x and b are vectors with 3 elements
-void solve_transposed_3x3(const double *A, const double *b, double *x);
 
 } // namespace Accelerator
 } // namespace Opm

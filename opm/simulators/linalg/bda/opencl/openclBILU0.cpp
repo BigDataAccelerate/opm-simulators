@@ -277,12 +277,20 @@ void openclBILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     cl::Event event;
     Timer t_apply;
     
+std::cout << "############# in openclBILU0<block_size>::apply\n";
 std::vector<double> tmp;
 tmp.resize(N);
+std::cout << "   input:   block_size = " << block_size << std::endl;
+std::cout << "   input:   numColors = " << numColors << std::endl;
+
+//     for (int color = 0; color < numColors; ++color) {
+// std::cout << "     input:   nodesPerColorPrefix[" <<color<<"] = "<< rowsPerColor[color] << std::endl;
+//     }
 queue->enqueueReadBuffer(x, CL_TRUE, 0, sizeof(double) * N, tmp.data());
 std::cout << "   before:   x[3] = " << tmp[3] << std::endl;
+queue->enqueueReadBuffer(y, CL_TRUE, 0, sizeof(double) * N, tmp.data());
+std::cout << "   before:   y[3] = " << tmp[3] << std::endl;
 
-std::cout << "in openclBILU0<block_size>::apply ---> x[0] = " << tmp[0] << std::endl;
 
     for (int color = 0; color < numColors; ++color) {
 #if CHOW_PATEL
@@ -295,6 +303,9 @@ std::cout << "in openclBILU0<block_size>::apply ---> x[0] = " << tmp[0] << std::
                                   color, rowsPerColor[color], block_size);
 #endif
     }
+
+queue->enqueueReadBuffer(x, CL_TRUE, 0, sizeof(double) * N, tmp.data());
+std::cout << "   after L:   x[3] = " << tmp[3] << std::endl;
 
     for (int color = numColors - 1; color >= 0; --color) {
 #if CHOW_PATEL
@@ -310,6 +321,8 @@ std::cout << "in openclBILU0<block_size>::apply ---> x[0] = " << tmp[0] << std::
 
 queue->enqueueReadBuffer(x, CL_TRUE, 0, sizeof(double) * N, tmp.data());
 std::cout << "   after:   x[3] = " << tmp[3] << std::endl;
+queue->enqueueReadBuffer(y, CL_TRUE, 0, sizeof(double) * N, tmp.data());
+std::cout << "   after:   y[3] = " << tmp[3] << std::endl;
 
     // apply relaxation
     OpenclKernels::scale(x, relaxation, N);
@@ -320,6 +333,7 @@ std::cout << "   after:   x[3] = " << tmp[3] << std::endl;
         out << "openclBILU0 apply: " << t_apply.stop() << " s";
         OpmLog::info(out.str());
     }
+std::cout << "############# out openclBILU0<block_size>::apply \n";
 }
 
 // template openclBILU0<n>::openclBILU0(bool, int);\ 

@@ -57,50 +57,39 @@ class rocsparseSolverBackend : public BdaSolver<block_size>
 
 private:
 
+    rocsparse_int *d_Arows, *d_Acols;
+    double *h_b = nullptr;                // b vector, on host (NOTE: imported from opencl)
+    std::vector<double> vals_contiguous;  // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
+    double *d_Avals;
+    double *d_x, *d_b, *d_rb, *d_r, *d_rw, *d_p;     // vectors, used during linear solve
+    double *d_pw, *d_s, *d_t, *d_v;
+    int  ver;
+    char rev[64];
+
+    std::shared_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
+
     bool useJacMatrix = false;
-    bool useCPR = false;
     
     std::unique_ptr<rocsparsePreconditioner<block_size> > prec; // can perform blocked ILU0 and AMG on pressure component
 
-    bool is_root; // allow for nested solvers, the root solver is called by BdaBridge
-
     bool analysis_done = false;
-    std::shared_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
-    std::shared_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
-    int nnzbs_prec = 0;    // number of nnz blocks in preconditioner matrix M
+
+    //TODO-R: remove, does not seem to be used: bool is_root; // allow for nested solvers, the root solver is called by BdaBridge
 
     rocsparse_direction dir = rocsparse_direction_row;
     rocsparse_operation operation = rocsparse_operation_none;
     rocsparse_handle handle;
     rocblas_handle blas_handle;
-    rocsparse_mat_descr descr_A, descr_M, descr_L, descr_U;
-    rocsparse_mat_info ilu_info;
+    rocsparse_mat_descr descr_A;
 #if HIP_VERSION >= 50400000
     rocsparse_mat_info spmv_info;
 #endif
     hipStream_t stream;
 
-    rocsparse_int *d_Arows, *d_Mrows;
-    rocsparse_int *d_Acols, *d_Mcols;
-    double *h_b = nullptr;                // b vector, on host (NOTE: imported from opencl)
-    std::vector<double> vals_contiguous;  // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
-    double *d_Avals, *d_Mvals;
-    double *d_x, *d_b, *d_rb, *d_r, *d_rw, *d_p;     // vectors, used during linear solve
-    double *d_pw, *d_s, *d_t, *d_v;
-    void *d_buffer; // buffer space, used by rocsparse ilu0 analysis (NOTE:in openclSolverBackend this was d_tmp)
-    int  ver;
-    char rev[64];
-
-
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
-
-    /// Solve linear system using cpr-bicgstab
-    /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
-    /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab_cpr(WellContributions& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
@@ -114,7 +103,7 @@ private:
     /// Reassign pointers, in case the addresses of the Dune variables have changed
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] b              input vector b, contains N values
-    void update_system(double *vals, double *b);
+//     void update_system(double *vals, double *b);
 
     /// Update linear system to GPU
     /// \param[in] b              input vector, contains N values

@@ -65,7 +65,7 @@ private:
 
     std::unique_ptr<openclPreconditioner<block_size> > prec;
                                                                   // can perform blocked ILU0 and AMG on pressure component
-    bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
+//     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge//TODO-R: remove, does not seem to be used
     bool analysis_done = false;
     std::shared_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
     std::shared_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner

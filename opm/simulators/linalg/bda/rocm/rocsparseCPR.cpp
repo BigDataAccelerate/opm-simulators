@@ -35,6 +35,45 @@
 #include <opm/simulators/linalg/bda/Misc.hpp>//Razvan
 // #include </home/rnane/Work/bigdataccelerate/src/opm-project/builds/dune/dune-2.8/dune-istl/dune/istl/paamg/matrixhierarchy.hh>
 
+#include <hip/hip_runtime_api.h>
+#include <hip/hip_version.h>
+
+#define HIP_CHECK(STAT)                                  \
+    do {                                                 \
+        const hipError_t stat = (STAT);                  \
+        if(stat != hipSuccess)                           \
+        {                                                \
+            std::ostringstream oss;                      \
+            oss << "rocsparseSolverBackend::hip ";       \
+            oss << "error: " << hipGetErrorString(stat); \
+            OPM_THROW(std::logic_error, oss.str());      \
+        }                                                \
+    } while(0)
+
+#define ROCSPARSE_CHECK(STAT)                            \
+    do {                                                 \
+        const rocsparse_status stat = (STAT);            \
+        if(stat != rocsparse_status_success)             \
+        {                                                \
+            std::ostringstream oss;                      \
+            oss << "rocsparseSolverBackend::rocsparse "; \
+            oss << "error: " << stat;                    \
+            OPM_THROW(std::logic_error, oss.str());      \
+        }                                                \
+    } while(0)
+
+#define ROCBLAS_CHECK(STAT)                              \
+    do {                                                 \
+        const rocblas_status stat = (STAT);              \
+        if(stat != rocblas_status_success)               \
+        {                                                \
+            std::ostringstream oss;                      \
+            oss << "rocsparseSolverBackend::rocblas ";   \
+            oss << "error: " << stat;                    \
+            OPM_THROW(std::logic_error, oss.str());      \
+        }                                                \
+    } while(0)
+
 namespace Opm
 {
 namespace Accelerator
@@ -44,11 +83,67 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-rocsparseCPR<block_size>::rocsparseCPR(int verbosity_, bool opencl_ilu_parallel_) :
+rocsparseCPR<block_size>::rocsparseCPR(int verbosity_) :
     rocsparsePreconditioner<block_size>(verbosity_)
 {
-    opencl_ilu_parallel = opencl_ilu_parallel_;
-    bilu0 = std::make_unique<rocsparseBILU0<block_size> >(opencl_ilu_parallel, verbosity_);
+    bilu0 = std::make_unique<rocsparseBILU0<block_size> >(verbosity_);
+}
+
+template <unsigned int block_size>
+bool rocsparseCPR<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix, rocsparse_int *d_Arows, rocsparse_int *d_Acols) {
+//openclCPR init_opencl_buffers() function ---> NOTE: implemented in the below function init_rocm_buffers!!!
+//     d_Amatrices.reserve(this->num_levels);
+//     d_Rmatrices.reserve(this->num_levels - 1);
+//     d_invDiags.reserve(this->num_levels - 1);
+//     for (Matrix& m : this->Amatrices) {
+//         d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
+//     }
+//     for (Matrix& m : this->Rmatrices) {
+//         d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
+//         d_f.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
+//         d_u.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
+// 
+//         d_PcolIndices.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(int) * m.M);
+//         d_invDiags.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.M); // create a cl::Buffer
+//         d_t.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.M);
+//     }
+//     d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->N);
+//     d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->N);
+//     d_mat = std::make_unique<OpenclMatrix>(context.get(), this->Nb, this->Nb, this->nnzb, block_size);
+//     d_coarse_y = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->Nb);
+//     d_coarse_x = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->Nb);
+}
+
+template <unsigned int block_size>
+void rocsparseCPR<block_size>::copy_system_to_gpu(double *b) {
+
+//openclCPR opencl_upload() code: --> NOTE: implemented in rocm_upload!
+//     d_mat->upload(queue.get(), this->mat);
+// 
+//     err = CL_SUCCESS;
+//     events.resize(2 * this->Rmatrices.size() + 1);
+//     err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * this->N, this->weights.data(), nullptr, &events[0]);
+//     for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
+//         d_Amatrices[i].upload(queue.get(), &this->Amatrices[i]);
+// 
+//         err |= queue->enqueueWriteBuffer(d_invDiags[i], CL_FALSE, 0, sizeof(double) * this->Amatrices[i].N, this->invDiags[i].data(), nullptr, &events[2*i+1]);
+//         err |= queue->enqueueWriteBuffer(d_PcolIndices[i], CL_FALSE, 0, sizeof(int) * this->Amatrices[i].N, this->PcolIndices[i].data(), nullptr, &events[2*i+2]);
+//     }
+//     cl::WaitForEvents(events);
+//     events.clear();
+//     if (err != CL_SUCCESS) {
+//         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
+//         OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueWriteBuffer error");
+//     }
+//     for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
+//         d_Rmatrices[i].upload(queue.get(), &this->Rmatrices[i]);
+//     }
+
+}
+
+template <unsigned int block_size>
+void rocsparseCPR<block_size>::update_system_on_gpu(double *b) {
+    
 }
 
 template <unsigned int block_size>
@@ -141,39 +236,40 @@ bool rocsparseCPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
 
 template <unsigned int block_size>
 void rocsparseCPR<block_size>::init_rocm_buffers() {
-//     d_Amatrices.reserve(this->num_levels);
-//     d_Rmatrices.reserve(this->num_levels - 1);
-//     d_invDiags.reserve(this->num_levels - 1);
-//     for (Matrix& m : this->Amatrices) {
-//         d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
-//     }
-//     for (Matrix& m : this->Rmatrices) {
-//         d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
-//         d_f.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
-//         d_u.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
-// 
-//         d_PcolIndices.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(int) * m.M);
-//         d_invDiags.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.M); // create a cl::Buffer
-//         d_t.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.M);
-//     }
-//     d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->N);
-//     d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->N);
+    d_Amatrices.reserve(this->num_levels);
+    d_Rmatrices.reserve(this->num_levels - 1);
+    d_invDiags.reserve(this->num_levels - 1);
+    for (Matrix& m : this->Amatrices) {
+        d_Amatrices.emplace_back(m.N, m.M, m.nnzs, 1);
+    }
+    for (Matrix& m : this->Rmatrices) {
+        d_Rmatrices.emplace_back(m.N, m.M, m.nnzs, 1);
+        d_f.emplace_back(sizeof(double) * m.N);
+        d_u.emplace_back(sizeof(double) * m.N);
+
+        d_PcolIndices.emplace_back(sizeof(int) * m.M);
+        d_invDiags.emplace_back(sizeof(double) * m.M); // create a cl::Buffer
+        d_t.emplace_back(sizeof(double) * m.M);
+    }
+    HIP_CHECK(hipMalloc((void**)&d_weights, sizeof(double) * this->N));
+    HIP_CHECK(hipMalloc((void**)&d_rs, sizeof(double) * this->N));
 //     d_mat = std::make_unique<OpenclMatrix>(context.get(), this->Nb, this->Nb, this->nnzb, block_size);
-//     d_coarse_y = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->Nb);
-//     d_coarse_x = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * this->Nb);
+//     HIP_CHECK(hipMalloc((void**)&d_mat, sizeof(double) * this->N));//TODO-R: define RocmMatrix!
+    HIP_CHECK(hipMalloc((void**)&d_coarse_y, sizeof(double) * this->Nb));
+    HIP_CHECK(hipMalloc((void**)&d_coarse_x, sizeof(double) * this->Nb));
 }
 
 
 template <unsigned int block_size>
 void rocsparseCPR<block_size>::rocm_upload() {
-//     HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
-//     d_mat->upload(queue.get(), this->mat);
+//     d_mat->upload(queue.get(), this->mat);//TODO: define RocmMatrix and upload methods!
 // 
 //     err = CL_SUCCESS;
 //     events.resize(2 * this->Rmatrices.size() + 1);
 //     err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * this->N, this->weights.data(), nullptr, &events[0]);
+    HIP_CHECK(hipMemcpyAsync(d_weights.get(), this->weights.data(), sizeof(double) * this->N, hipMemcpyHostToDevice, this->stream));
 //     for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
-//         d_Amatrices[i].upload(queue.get(), &this->Amatrices[i]);
+//         d_Amatrices[i].upload(queue.get(), &this->Amatrices[i]);//TODO: define RocmMatrix and upload methods!
 // 
 //         err |= queue->enqueueWriteBuffer(d_invDiags[i], CL_FALSE, 0, sizeof(double) * this->Amatrices[i].N, this->invDiags[i].data(), nullptr, &events[2*i+1]);
 //         err |= queue->enqueueWriteBuffer(d_PcolIndices[i], CL_FALSE, 0, sizeof(int) * this->Amatrices[i].N, this->PcolIndices[i].data(), nullptr, &events[2*i+2]);
@@ -185,7 +281,7 @@ void rocsparseCPR<block_size>::rocm_upload() {
 //         OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueWriteBuffer error");
 //     }
 //     for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
-//         d_Rmatrices[i].upload(queue.get(), &this->Rmatrices[i]);
+//         d_Rmatrices[i].upload(queue.get(), &this->Rmatrices[i]);//TODO: define RocmMatrix and upload methods!
 //     }
 }
 

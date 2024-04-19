@@ -382,8 +382,8 @@ std::cout << "---in : cSolverBackend<block_size>::analyze_matrix() ; useJacMatri
     bool success;
     if (useJacMatrix)
         success = prec->analyze_matrix(mat.get(), jacMat.get());
-    else
-        success = prec->analyze_matrix(mat.get());
+    else{std::cout << " sdfafafasfa : " << mat.get()->Nb << std::endl;
+        success = prec->analyze_matrix(mat.get());}
 std::cout << "---out: cSolverBackend<block_size>::analyze_matrix()\n";
 //     if (verbosity > 2) {
 //         std::ostringstream out;

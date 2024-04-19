@@ -27,6 +27,11 @@
 
 #include <opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.hpp>
 
+#include <rocblas/rocblas.h>
+#include <rocsparse/rocsparse.h>
+
+#include <hip/hip_version.h>
+
 namespace Opm
 {
 namespace Accelerator
@@ -59,8 +64,21 @@ private:
     int numColors;
     std::once_flag pattern_uploaded;
 
-    bool opencl_ilu_parallel;
+    rocsparse_direction dir = rocsparse_direction_row;
+    rocsparse_operation operation = rocsparse_operation_none;
+    rocsparse_handle handle;
+    rocsparse_mat_descr descr_M, descr_L, descr_U;
+    rocsparse_mat_info ilu_info;
+#if HIP_VERSION >= 50400000
+    rocsparse_mat_info spmv_info;
+#endif
+    hipStream_t stream;
 
+    //NOTE: copied here from rocsparseSolverBackend.hpp 
+    rocsparse_int *d_Mrows, *d_Mcols; 
+    double *d_Mvals, *d_t;
+    void *d_buffer; // buffer space, used by rocsparse ilu0 analysis (NOTE:in openclSolverBackend this was d_tmp)
+    
     typedef struct {
         double *invDiagVals;    // nnz values of diagonal blocks of the matrix, inverted
         double *diagIndex;      // index of diagonal block of each row, used to differentiate between lower and upper triangular part
@@ -72,10 +90,18 @@ private:
     } GPU_storage;
 
     GPU_storage s;
-
+    
 public:
+//     bool useJacMatrix = false;
+//     std::shared_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
+//     int nnzbs_prec = 0;    // number of nnz blocks in preconditioner matrix M
 
-    rocsparseBILU0(bool opencl_ilu_parallel, int verbosity_);
+    rocsparseBILU0(int verbosity_);
+    
+    /// Initialize GPU and allocate memory
+    /// \param[in] matrix     matrix A
+    /// \param[in] jacMatrix  matrix for preconditioner
+    bool initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix, rocsparse_int *d_Arows, rocsparse_int *d_Acols);
 
     // analysis, extract parallelism if specified
     bool analyze_matrix(BlockedMatrix *mat);
@@ -96,6 +122,10 @@ public:
     void apply(const cl::Buffer& y, cl::Buffer& x) {}
 #endif
 
+    void copy_system_to_gpu(double *mVals);
+    void update_system(double *vals, double *b);
+    void update_system_on_gpu(double *b);
+    
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()
     {
         return {{LUmat->rowPointers, LUmat->rowPointers + (Nb + 1)}, {LUmat->colIndices, LUmat->colIndices + nnzb}, diagIndex};

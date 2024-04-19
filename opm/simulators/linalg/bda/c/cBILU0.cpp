@@ -50,7 +50,7 @@ cBILU0<block_size>::cBILU0(bool opencl_ilu_parallel_, int verbosity_) :
 template <unsigned int block_size>
 bool cBILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
 {
-// std::cout << "-----in : cBILU0<block_size>::analyze_matrix(BlockedMatrix *mat_) --> call analyze_matrix(mat, nullptr) \n";
+std::cout << "-----in : cBILU0<block_size>::analyze_matrix(BlockedMatrix *mat_) --> call analyze_matrix(mat, nullptr) \n";
     return analyze_matrix(mat, nullptr);
 }
 
@@ -213,21 +213,32 @@ void cBILU0<block_size>::apply( double& y, double& x)
     const double relaxation = 0.9;
     Timer t_apply;
     
-std::cout << "----> TODO: cBILU0 apply" << std::endl;
+std::cout << "############# TODO: cBILU0 apply" << std::endl;
+std::cout << "   input:   block_size = " << block_size << std::endl;
+std::cout << "   input:   numColors = " << numColors << std::endl;
 
-    for (int color = 0; color < numColors; ++color) {
-//         OpenclKernels::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
-//                                   s.diagIndex, y, x, s.rowsPerColor,
-//                                   color, rowsPerColor[color], block_size);
-//         std::cout << "ILU_apply1 for color: " << color << std::endl;
-    }
+//     for (int color = 0; color < numColors; ++color) {
+// std::cout << "     input:   nodesPerColorPrefix[" <<color<<"] = "<< rowsPerColor[color] << std::endl;
+//     }
+std::cout << "   before:   x[3] = " << (&x)[3] << std::endl;
+std::cout << "   before:   y[3] = " << (&y)[3] << std::endl;
 
-    for (int color = numColors - 1; color >= 0; --color) {
-//         OpenclKernels::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
-//                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
-//                                   color, rowsPerColor[color], block_size);
-//         std::cout << "ILU_apply2 for color: " << color << std::endl;
-    }
+//     for (int color = 0; color < numColors; ++color) {
+// // std::cout << "      LT: color " << color << std::endl;
+// //         OpenclKernels::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
+// //                                   s.diagIndex, y, x, s.rowsPerColor,
+// //                                   color, rowsPerColor[color], block_size);
+// //         std::cout << "ILU_apply1 for color: " << color << std::endl;
+//     }
+
+std::cout << "   after L:   x[3] = " << (&x)[3] << std::endl;
+//     for (int color = numColors - 1; color >= 0; --color) {
+// // std::cout << "    UP:   color " << color << std::endl;
+// //         OpenclKernels::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
+// //                                   s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
+// //                                   color, rowsPerColor[color], block_size);
+// //         std::cout << "ILU_apply2 for color: " << color << std::endl;
+//     }
 
     // apply relaxation
 //     OpenclKernels::scale(x, relaxation, N);

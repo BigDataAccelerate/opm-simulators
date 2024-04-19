@@ -32,22 +32,32 @@ namespace Accelerator
 {
 
 template <unsigned int block_size>
-std::unique_ptr<rocsparsePreconditioner<block_size> > rocsparsePreconditioner<block_size>::create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel) {
+std::unique_ptr<rocsparsePreconditioner<block_size> > rocsparsePreconditioner<block_size>::create(PreconditionerType type, int verbosity) {
     if (type == PreconditionerType::BILU0) {
-        return std::make_unique<Opm::Accelerator::rocsparseBILU0<block_size> >(opencl_ilu_parallel, verbosity);
+        return std::make_unique<Opm::Accelerator::rocsparseBILU0<block_size> >(verbosity);
     } else if (type == PreconditionerType::CPR) {
-        return std::make_unique<Opm::Accelerator::rocsparseCPR<block_size> >(verbosity, opencl_ilu_parallel);
+        return std::make_unique<Opm::Accelerator::rocsparseCPR<block_size> >(verbosity);
     } else {
         OPM_THROW(std::logic_error, "Invalid PreconditionerType");
     }
 }
 
-// template <unsigned int block_size>
-// bool rocsparsePreconditioner<block_size>::analyze_matrix(BlockedMatrix *mat)
-// {
-//     return analyze_matrix(mat, nullptr);
-// }
-// 
+template <unsigned int block_size>
+void rocsparsePreconditioner<block_size>::set_matrix_analysis(rocsparse_mat_descr descr_L, rocsparse_mat_descr descr_U)
+{
+    descr_L = descr_L;
+    descr_U = descr_U;
+}
+
+template <unsigned int block_size>
+void rocsparsePreconditioner<block_size>::set_context(rocsparse_handle handle, rocsparse_direction dir, rocsparse_operation operation, hipStream_t stream)
+{
+    handle = handle;
+    dir = dir;
+    operation = operation;
+    stream = stream;
+}
+
 // template <unsigned int block_size>
 // bool rocsparsePreconditioner<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
 // {
@@ -164,7 +174,10 @@ std::unique_ptr<rocsparsePreconditioner<block_size> > rocsparsePreconditioner<bl
 // template bool rocsparsePreconditioner<n>::analyze_matrix(BlockedMatrix *, BlockedMatrix *);                             
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template std::unique_ptr<rocsparsePreconditioner<n> > rocsparsePreconditioner<n>::create(PreconditionerType, int, bool);         \
+template std::unique_ptr<rocsparsePreconditioner<n> > rocsparsePreconditioner<n>::create(PreconditionerType, int);         \
+template void rocsparsePreconditioner<n>::set_matrix_analysis(rocsparse_mat_descr, rocsparse_mat_descr ); \
+template void rocsparsePreconditioner<n>::set_context(rocsparse_handle, rocsparse_direction, rocsparse_operation, hipStream_t);
+
 
 INSTANTIATE_BDA_FUNCTIONS(1);
 INSTANTIATE_BDA_FUNCTIONS(2);

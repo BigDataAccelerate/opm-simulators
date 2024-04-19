@@ -35,7 +35,7 @@ namespace Accelerator
 template <unsigned int block_size>
 std::unique_ptr<cPreconditioner<block_size> > cPreconditioner<block_size>::create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel) {
     if (type == PreconditionerType::BILU0) {
-//         return std::make_unique<Opm::Accelerator::cBILU0<block_size> >(opencl_ilu_parallel, verbosity);
+         return std::make_unique<Opm::Accelerator::cBILU0<block_size> >(opencl_ilu_parallel, verbosity);
      } else if (type == PreconditionerType::CPR) {
         return std::make_unique<Opm::Accelerator::cCPR<block_size> >(verbosity, opencl_ilu_parallel);
     } else if (type == PreconditionerType::BISAI) {
