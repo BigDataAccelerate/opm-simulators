@@ -52,13 +52,13 @@ class rocsparseCPR : public rocsparsePreconditioner<block_size>, public CprCreat
 private:
     std::vector<cMatrix> d_Amatrices, d_Rmatrices; // scalar matrices that represent the AMG hierarchy
     
-    std::vector<std::vector<int> > d_PcolIndices; // prolongation does not need a full matrix, only store colIndices
-    std::vector<std::vector<double> > d_invDiags; // inverse of diagonal of Amatrices
+    std::vector<int> d_PcolIndices; // prolongation does not need a full matrix, only store colIndices
+    std::vector<double> d_invDiags; // inverse of diagonal of Amatrices
     std::vector<double> d_t, d_f, d_u; // intermediate vectors used during amg cycle
-    std::unique_ptr<double> d_rs;      // use before extracting the pressure
-    std::unique_ptr<double> d_weights; // the quasiimpes weights, used to extract pressure
+    std::vector<double> d_rs;      // use before extracting the pressure
+    std::vector<double> d_weights; // the quasiimpes weights, used to extract pressure
     std::unique_ptr<cMatrix> d_mat;   // stores blocked matrix
-    std::unique_ptr<double> d_coarse_y, d_coarse_x; // stores the scalar vectors
+    std::vector<double> d_coarse_y, d_coarse_x; // stores the scalar vectors
     std::once_flag rocm_buffers_allocated;  // only allocate OpenCL Buffers once
 
     std::unique_ptr<rocsparseBILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
@@ -93,7 +93,6 @@ public:
     /// Update linear system to GPU
     /// \param[in] b              input vector, contains N values
     void update_system_on_gpu(double *b);
-
 
     bool analyze_matrix(BlockedMatrix *mat);
     bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat);

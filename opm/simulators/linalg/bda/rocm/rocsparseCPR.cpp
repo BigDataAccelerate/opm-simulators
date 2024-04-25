@@ -31,6 +31,7 @@
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/rocm/rocsparseCPR.hpp>
+#include <opm/simulators/linalg/bda/rocm/hipKernels.hpp>
 
 #include <opm/simulators/linalg/bda/Misc.hpp>//Razvan
 // #include </home/rnane/Work/bigdataccelerate/src/opm-project/builds/dune/dune-2.8/dune-istl/dune/istl/paamg/matrixhierarchy.hh>
@@ -267,7 +268,7 @@ void rocsparseCPR<block_size>::rocm_upload() {
 //     err = CL_SUCCESS;
 //     events.resize(2 * this->Rmatrices.size() + 1);
 //     err |= queue->enqueueWriteBuffer(*d_weights, CL_FALSE, 0, sizeof(double) * this->N, this->weights.data(), nullptr, &events[0]);
-    HIP_CHECK(hipMemcpyAsync(d_weights.get(), this->weights.data(), sizeof(double) * this->N, hipMemcpyHostToDevice, this->stream));
+    HIP_CHECK(hipMemcpyAsync(d_weights.data(), this->weights.data(), sizeof(double) * this->N, hipMemcpyHostToDevice, this->stream));
 //     for (unsigned int i = 0; i < this->Rmatrices.size(); ++i) {
 //         d_Amatrices[i].upload(queue.get(), &this->Amatrices[i]);//TODO: define RocmMatrix and upload methods!
 // 
@@ -290,34 +291,24 @@ void rocsparseCPR<block_size>::amg_cycle_gpu(const int level, double &y, double 
     cMatrix *A = &d_Amatrices[level];
     cMatrix *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
+    double zero = 0.0;
+    double one = 1.0;
+    
+    rocsparse_mat_info spmv_info;
+    rocsparse_mat_descr descr_A;
+    ROCSPARSE_CHECK(rocsparse_create_mat_info(&spmv_info));
+    ROCSPARSE_CHECK(rocsparse_create_mat_descr(&descr_A));
 
     if (level == this->num_levels - 1) {
         // solve coarsest level
         std::vector<double> h_y(Ncur), h_x(Ncur, 0);
 
-//TODO-Razvan: implement the transfer of the y vector to host side!
-// HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
-//         events.resize(1);
-//         err = queue->enqueueReadBuffer(y, CL_FALSE, 0, sizeof(double) * Ncur, h_y.data(), nullptr, &events[0]);
-//         cl::WaitForEvents(events);
-//         events.clear();
-//         if (err != CL_SUCCESS) {
-//             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-//             OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueReadBuffer error");
-//         }
+        HIP_CHECK(hipMemcpyAsync(h_y.data(), &y, sizeof(double) * Ncur, hipMemcpyDeviceToHost, this->stream));
         
         // solve coarsest level using umfpack
         this->umfpack.apply(h_x.data(), h_y.data());
 
-//TODO-Razvan: implement the transfer of the y vector to gpu side!
-//         events.resize(1);
-//         err = queue->enqueueWriteBuffer(x, CL_FALSE, 0, sizeof(double) * Ncur, h_x.data(), nullptr, &events[0]);
-//         cl::WaitForEvents(events);
-//         events.clear();
-//         if (err != CL_SUCCESS) {
-//             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-//             OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueWriteBuffer error");
-//         }
+        HIP_CHECK(hipMemcpyAsync(&x, h_x.data(), sizeof(double) * Ncur, hipMemcpyHostToDevice, this->stream));
         
         return;
     }
@@ -330,20 +321,33 @@ void rocsparseCPR<block_size>::amg_cycle_gpu(const int level, double &y, double 
     // presmooth
     double jacobi_damping = 0.65; // default value in amgcl: 0.72
     for (unsigned i = 0; i < this->num_pre_smooth_steps; ++i){
-        std::cout << "TODO: OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);\n";
-        std::cout << "TODO: OpenclKernels::vmul(jacobi_damping, invDiags[level], t, x, Ncur);\n";
+        HipKernels::residual(A->nnzValues.data(), A->colIndices.data(), A->rowPointers.data(), &x, &y, &t, Ncur, 1);
+        HipKernels::vmul(jacobi_damping, &(d_invDiags.data()[level]), &t, &x, Ncur);
     }
 
     // move to coarser level
-    std::cout << "TODO: OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);\n";
-    std::cout << "TODO: OpenclKernels::spmv(R->nnzValues, R->colIndices, R->rowPointers, t, f, Nnext, 1, true);\n";
+    HipKernels::residual(A->nnzValues.data(), A->colIndices.data(), A->rowPointers.data(), &x, &y, &t, Ncur, 1);
+    
+    std::cout << "TOCHECK: call rocsparse::spmv(R->nnzValues, R->colIndices, R->rowPointers, t, f, Nnext, 1, true);\n";
+// #if HIP_VERSION >= 50400000
+    ROCSPARSE_CHECK(rocsparse_dbsrmv_ex(this->handle, this->dir, this->operation,
+                                        Nnext, Nnext, Nnext, &one, descr_A,
+                                        R->nnzValues.data(), R->rowPointers.data(), R->colIndices.data(), 1,
+                                        spmv_info, &x, &zero, &y));
+// #else
+//     ROCSPARSE_CHECK(rocsparse_dbsrmv(handle, dir, operation,
+//                                         Nb, Nb, nnzb, &one, descr_A,
+//                                         d_Avals, d_Arows, d_Acols, block_size,
+//                                         d_x, &zero, d_r));
+// #endif
+    
     amg_cycle_gpu(level + 1, f, u);
-    std::cout << "TODO: OpenclKernels::prolongate_vector(u, x, PcolIndices[level], Ncur);\n";
+    HipKernels::prolongate_vector(&u, &x, &(d_PcolIndices.data()[level]), Ncur);
 
     // postsmooth
     for (unsigned i = 0; i < this->num_post_smooth_steps; ++i){
-        std::cout << "TODO: OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);\n";
-        std::cout << "TODO: OpenclKernels::vmul(jacobi_damping, invDiags[level], t, x, Ncur);\n";
+        HipKernels::residual(A->nnzValues.data(), A->colIndices.data(), A->rowPointers.data(), &x, &y, &t, Ncur, 1);
+        HipKernels::vmul(jacobi_damping, &(d_invDiags.data()[level]), &t, &x, Ncur);
     }
 }
 
@@ -351,29 +355,19 @@ void rocsparseCPR<block_size>::amg_cycle_gpu(const int level, double &y, double 
 // x = prec(y)
 template <unsigned int block_size>
 void rocsparseCPR<block_size>::apply_amg(const double& y, double& x) {
-//     // 0-initialize u and x vectors --> TODO-Razvan: implement this in rocsparse/HIP
-//     events.resize(d_u.size() + 1);
-//     err = queue->enqueueFillBuffer(*d_coarse_x, 0, 0, sizeof(double) * this->Nb, nullptr, &events[0]);
-// 
-//     for (unsigned int i = 0; i < d_u.size(); ++i) {
-//         err |= queue->enqueueFillBuffer(d_u[i], 0, 0, sizeof(double) * this->Rmatrices[i].N, nullptr, &events[i + 1]);
-//     }
-//     cl::WaitForEvents(events);
-//     events.clear();
-//     if (err != CL_SUCCESS) {
-//         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-//         OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
-//     }
+    // initialize u and x vectors
+    HIP_CHECK(hipMemsetAsync(d_coarse_x.data(), 0, sizeof(double) * this->Nb, this->stream));
 
-    std::cout << " TODO: OpenclKernels::residual(mat->nnzValues, mat->colIndices, mat->rowPointers, x, y, *rs, Nb, block_size);\n";
-    std::cout << " TODO: OpenclKernels::full_to_pressure_restriction(*rs, *weights, *coarse_y, Nb);\n";
-    std::cout << " TODO: OpenclKernels::residual(mat->nnzValues, mat->colIndices, mat->rowPointers, x, y, *rs, Nb, block_size);\n";
-    std::cout << " TODO: OpenclKernels::full_to_pressure_restriction(*rs, *weights, *coarse_y, Nb);\n";
+    for (unsigned int i = 0; i < d_u.size(); ++i) {
+        HIP_CHECK(hipMemsetAsync(&d_u[i], 0, sizeof(double) * this->Rmatrices[i].N, this->stream));
+    }
 
-    amg_cycle_gpu(0, *d_coarse_y, *d_coarse_x);//TODO-Razvan: continue to implement this metod and all memory transfers!!!
+    HipKernels::residual(d_mat->nnzValues.data(), d_mat->colIndices.data(), d_mat->rowPointers.data(), &x, &y, d_rs.data(), this->Nb, block_size);
+    HipKernels::full_to_pressure_restriction(d_rs.data(), d_weights.data(), d_coarse_y.data(), Nb);
 
-    //OpenclKernels::add_coarse_pressure_correction(*d_coarse_x, x, pressure_idx, Nb);
-    std::cout << " TODO: OpenclKernels::add_coarse_pressure_correction(*d_coarse_x, x, pressure_idx, Nb);\n";
+    amg_cycle_gpu(0, *(d_coarse_y.data()), *(d_coarse_x.data()));//TODO-Razvan: continue to implement this metod and all memory transfers!!!
+
+    HipKernels::add_coarse_pressure_correction(d_coarse_x.data(), &x, this->pressure_idx, Nb);
 }
 
 template <unsigned int block_size>
