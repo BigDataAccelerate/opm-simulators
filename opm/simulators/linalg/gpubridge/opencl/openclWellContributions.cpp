@@ -20,6 +20,7 @@
 #include <config.h> // CMake
 #include <dune/common/timer.hh>
 #include <opm/simulators/linalg/gpubridge/opencl/openclWellContributions.hpp>
+#include <dune/common/timer.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>

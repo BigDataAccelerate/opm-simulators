@@ -494,9 +494,9 @@ static int nliter = 0;
                 if(verbosity>=3) {
                     std::cout << "========== BlackoilModelEbos::nonlinearIterationNewton cum time: " << t_total << "(+" << t1.elapsed() << ") ========\n\n";
                 }
-if(nliter++ == 2){ std::cout << " Exiting in BlackoilModel.hpp...\n"; exit(0);//Razvan              
-}
-else std::cout << "nliter = " << nliter << std::endl;
+//if(nliter++ == 2){ std::cout << " Exiting in BlackoilModel.hpp...\n"; exit(0);//Razvan              
+//}
+//else std::cout << "nliter = " << nliter << std::endl;
     
                 perfTimer.reset();
                 perfTimer.start();

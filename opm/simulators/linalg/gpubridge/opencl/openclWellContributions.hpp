@@ -60,6 +60,9 @@ protected:
 
     std::vector<Scalar> h_x;
     std::vector<Scalar> h_y;
+    
+    double c_copy = 0.0;
+    double c_umfcompute = 0.0;
 };
 
 } // namespace Opm
