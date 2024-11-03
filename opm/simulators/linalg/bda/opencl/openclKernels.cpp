@@ -183,10 +183,10 @@ Scalar OpenclKernels<Scalar>::dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& 
         gpu_sum += tmp[i];
     }
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels dot() time: " << t_dot.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels dot() time: " << t_dot.stop() << " s";
         OpmLog::info(oss.str());
     }
 
@@ -213,10 +213,10 @@ Scalar OpenclKernels<Scalar>::norm(cl::Buffer& in, cl::Buffer& out, int N)
     }
     gpu_norm = sqrt(gpu_norm);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels norm() time: " << t_norm.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels norm() time: " << t_norm.stop() << " s";
         OpmLog::info(oss.str());
     }
 
@@ -233,10 +233,10 @@ void OpenclKernels<Scalar>::axpy(cl::Buffer& in, const Scalar a, cl::Buffer& out
 
     cl::Event event = (*axpy_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, a, out, N);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels axpy() time: " << t_axpy.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels axpy() time: " << t_axpy.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -251,10 +251,10 @@ void OpenclKernels<Scalar>::scale(cl::Buffer& in, const Scalar a, int N)
 
     cl::Event event = (*scale_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, a, N);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels scale() time: " << t_scale.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels scale() time: " << t_scale.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -269,10 +269,10 @@ void OpenclKernels<Scalar>::vmul(const Scalar alpha, cl::Buffer& in1, cl::Buffer
 
     cl::Event event = (*vmul_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), alpha, in1, in2, out, N);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels vmul() time: " << t_vmul.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels vmul() time: " << t_vmul.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -288,10 +288,10 @@ void OpenclKernels<Scalar>::custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r,
 
     cl::Event event = (*custom_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), p, v, r, omega, beta, N);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels custom() time: " << t_custom.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels custom() time: " << t_custom.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -306,10 +306,10 @@ void OpenclKernels<Scalar>::full_to_pressure_restriction(const cl::Buffer& fine_
 
     cl::Event event = (*full_to_pressure_restriction_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), fine_y, weights, coarse_y, Nb);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels full_to_pressure_restriction() time: " << t.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels full_to_pressure_restriction() time: " << t.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -324,10 +324,10 @@ void OpenclKernels<Scalar>::add_coarse_pressure_correction(cl::Buffer& coarse_x,
 
     cl::Event event = (*add_coarse_pressure_correction_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), coarse_x, fine_x, pressure_idx, Nb);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels add_coarse_pressure_correction() time: " << t.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels add_coarse_pressure_correction() time: " << t.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -342,10 +342,10 @@ void OpenclKernels<Scalar>::prolongate_vector(const cl::Buffer& in, cl::Buffer& 
 
     cl::Event event = (*prolongate_vector_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)), in, out, cols, N);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels prolongate_vector() time: " << t.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels prolongate_vector() time: " << t.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -380,10 +380,10 @@ void OpenclKernels<Scalar>::spmv(cl::Buffer& vals, cl::Buffer& cols, cl::Buffer&
         }
     }
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels spmv_blocked() time: " << t_spmv.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels spmv_blocked() time: " << t_spmv.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -408,10 +408,10 @@ void OpenclKernels<Scalar>::residual(cl::Buffer& vals, cl::Buffer& cols, cl::Buf
                               vals, cols, rows, Nb, x, rhs, out, cl::Local(lmem_per_work_group));
     }
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels residual_blocked() time: " << t_residual.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels residual_blocked() time: " << t_residual.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -437,7 +437,7 @@ void OpenclKernels<Scalar>::ILU_apply1(cl::Buffer& rowIndices, cl::Buffer& vals,
     if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels ILU_apply1() time: " << t_ilu_apply1.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels ILU_apply1() time: " << t_ilu_apply1.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -463,7 +463,7 @@ void OpenclKernels<Scalar>::ILU_apply2(cl::Buffer& rowIndices, cl::Buffer& vals,
     if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels ILU_apply2() time: " << t_ilu_apply2.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels ILU_apply2() time: " << t_ilu_apply2.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -487,10 +487,10 @@ void OpenclKernels<Scalar>::ILU_decomp(int firstRow, int lastRow, cl::Buffer& ro
                                       invDiagVals, diagIndex, rowsThisColor,
                                       cl::Local(lmem_per_work_group));
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels ILU_decomp() time: " << t_ilu_decomp.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels ILU_decomp() time: " << t_ilu_decomp.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -510,10 +510,10 @@ void OpenclKernels<Scalar>::apply_stdwells(cl::Buffer& d_Cnnzs_ocl, cl::Buffer &
                                          d_Cnnzs_ocl, d_Dnnzs_ocl, d_Bnnzs_ocl, d_Ccols_ocl, d_Bcols_ocl, d_x, d_y, dim, dim_wells, d_val_pointers_ocl,
                                          cl::Local(lmem1), cl::Local(lmem2), cl::Local(lmem2));
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels apply_stdwells() time: " << t_apply_stdwells.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels apply_stdwells() time: " << t_apply_stdwells.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -530,10 +530,10 @@ void OpenclKernels<Scalar>::isaiL(cl::Buffer& diagIndex, cl::Buffer& colPointers
     cl::Event event = (*isaiL_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
                                  diagIndex, colPointers, mapping, nvc, luIdxs, xxIdxs, dxIdxs, LUvals, invLvals, Nb);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels isaiL() time: " << t_isaiL.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels isaiL() time: " << t_isaiL.stop() << " s";
         OpmLog::info(oss.str());
     }
 }
@@ -551,10 +551,10 @@ void OpenclKernels<Scalar>::isaiU(cl::Buffer& diagIndex, cl::Buffer& colPointers
     cl::Event event = (*isaiU_k)(cl::EnqueueArgs(*queue, cl::NDRange(total_work_items), cl::NDRange(work_group_size)),
                                  diagIndex, colPointers, rowIndices, mapping, nvc, luIdxs, xxIdxs, dxIdxs, LUvals, invDiagVals, invUvals, Nb);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 5) {
         event.wait();
         std::ostringstream oss;
-        oss << std::scientific << "OpenclKernels isaiU() time: " << t_isaiU.stop() << " s";
+        oss << std::scientific << "-------------OpenclKernels isaiU() time: " << t_isaiU.stop() << " s";
         OpmLog::info(oss.str());
     }
 }

@@ -91,6 +91,7 @@ private:
     std::string accelerator_mode_;
     std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
     std::vector<std::set<int>> wellConnectionsGraph_;
+    int verbosity;
 };
 
 }

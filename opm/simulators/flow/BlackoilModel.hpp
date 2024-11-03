@@ -424,6 +424,8 @@ namespace Opm {
                                                        const SimulatorTimerInterface& timer,
                                                        NonlinearSolverType& nonlinear_solver)
         {
+            int verbosity = Parameters::Get<Parameters::LinearSolverVerbosity>();
+//             EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
 
             // -----------   Set up reports and timer   -----------
             SimulatorReportSingle report;
@@ -436,6 +438,10 @@ namespace Opm {
                 perfTimer.reset();
                 perfTimer.start();
                 report.total_newton_iterations = 1;
+                static double t_total = 0.0;
+                static double t_wells = 0.0;
+                static double t_solve = 0.0;
+                Dune::Timer t1, t2(false), t3(false);
 
                 // Compute the nonlinear update.
                 unsigned nc = simulator_.model().numGridDof();
@@ -447,25 +453,47 @@ namespace Opm {
                     // Apply the Schur complement of the well model to
                     // the reservoir linearized equations.
                     // Note that linearize may throw for MSwells.
+                    t2.start();
                     wellModel().linearize(simulator().model().linearizer().jacobian(),
                                           simulator().model().linearizer().residual());
+                    t_wells += t2.stop();
+                    if(verbosity>=3){
+                        std::cout << "BlackoilModelEbos::nonlinearIteration cum well time: " << t_wells << "\n";
+                    }
 
+                    t3.start();
                     // ---- Solve linear system ----
                     solveJacobianSystem(x);
+                    t_solve += t3.stop();
 
                     report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
                     report.total_linear_iterations += linearIterationsLastSolve();
+                    
+                    if(verbosity>=3) {
+                        std::cout << "BlackoilModelEbos::nonlinearIteration cum solve time: " << t_solve << " (+" << t3.elapsed() << ")\n";
+                        std::cout << "BlackoilModelEbos::report.linear_solve_time(cum): " << report.linear_solve_time << "\n";
+                    }
                 }
                 catch (...) {
                     report.linear_solve_setup_time += linear_solve_setup_time_;
                     report.linear_solve_time += perfTimer.stop();
+                    static double t_fail = 0.0;
+                    t_fail += report.linear_solve_time;
+                    if(verbosity>=3) {
+                        std::cout << "BlackoilModelEbos fail cum time: " << t_fail << "(+" << report.linear_solve_time << ")\n";
+                    }                    
                     report.total_linear_iterations += linearIterationsLastSolve();
 
                     failureReport_ += report;
                     throw; // re-throw up
                 }
 
+                t_total += t1.stop();
+                if(verbosity>=3) {
+                    std::cout << "========== BlackoilModelEbos::nonlinearIteration cum time: " << t_total << "(+" << t1.elapsed() << ") ========\n\n";
+                }
+// std::cout << " Exiting in BlackoilModel.hpp...\n"; exit(0);//Razvan                
                 perfTimer.reset();
                 perfTimer.start();
 

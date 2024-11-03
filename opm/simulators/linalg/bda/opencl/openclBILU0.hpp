@@ -84,6 +84,13 @@ private:
 #if CHOW_PATEL
     ChowPatelIlu<block_size> chowPatelIlu;
 #endif
+    
+    double c_copy = 0.0;
+    double c_cpucopy = 0.0;
+    double c_apply = 0.0;
+    double c_convert = 0.0;
+    double c_decomp = 0.0;
+    double c_analysis = 0.0;
 
 public:
 

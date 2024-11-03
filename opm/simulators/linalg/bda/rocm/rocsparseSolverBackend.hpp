@@ -54,6 +54,16 @@ class rocsparseSolverBackend : public BdaSolver<Scalar,block_size>
 
 private:
     double c_copy = 0.0; // cummulative timer measuring the total time it takes to transfer the data to the GPU
+    //Dune::Timer tc_total, tc_prec, tc_spmv, tc_rest;
+    double c_total1 = 0.0;
+    double c_total2 = 0.0;
+    double c_prec = 0.0;
+    double c_spmv = 0.0;
+    double c_rest = 0.0;
+    double c_decomp = 0.0;
+    double c_well = 0.0;
+    double c_result = 0.0;
+    double c_analysis = 0.0;
 
     bool useJacMatrix = false;
 

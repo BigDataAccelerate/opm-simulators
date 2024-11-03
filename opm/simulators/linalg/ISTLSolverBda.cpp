@@ -67,6 +67,7 @@ BdaSolverInfo(const std::string& accelerator_mode,
                                        tolerance, platformID, deviceID,
                                        opencl_ilu_parallel, linsolver))
     , accelerator_mode_(accelerator_mode)
+    , verbosity(linear_solver_verbosity)
 {}
 
 template<class Matrix, class Vector>
@@ -105,6 +106,8 @@ apply(Vector& rhs,
 {
     bool use_gpu = bridge_->getUseGpu();
     if (use_gpu) {
+        Dune::Timer t5;
+        static double t_wells = 0.0;
         auto wellContribs = WellContributions<Scalar>::create(accelerator_mode_, useWellConn);
         bridge_->initWellContributions(*wellContribs, x.N() * x[0].N());
 
@@ -114,34 +117,58 @@ apply(Vector& rhs,
             getContribs(*wellContribs);
         }
 #endif
+        t_wells += t5.stop();
+        if(verbosity >= 3)
+        {
+            std::cout << "-BdaSolverInfo::apply cum wells time: " << t_wells << "(+" << t5.elapsed() << ")\n";
+        }
 
-	bool use_multithreading = true;
+        bool use_multithreading = true;
 #if HAVE_OPENMP
-	// if user  manually sets --threads-per-process=1, do not use multithreading 
+        // if user  manually sets --threads-per-process=1, do not use multithreading 
         if (omp_get_max_threads() == 1)
-	    use_multithreading = false;
+            use_multithreading = false;
 #endif // HAVE_OPENMP
 
+        static double t_total = 0.0;
+        static double t_solve = 0.0;
         if (numJacobiBlocks_ > 1) {
+            Dune::Timer t;
             if(use_multithreading) {
-	      //NOTE: copyThread can safely write to jacMat because in solve_system both matrix and *blockJacobiForGPUILU0_ diagonal entries
-	      //are checked and potentially overwritten in replaceZeroDiagonal() by mainThread. However, no matter the thread writing sequence,
-	      //the final entry in jacMat is correct.
-//#if HAVE_OPENMP
-              copyThread = std::make_shared<std::thread>([&](){this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);});
-//#endif // HAVE_OPENMP
-	    }
-	    else {
-	      this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
-	    }
+                //NOTE: copyThread can safely write to jacMat because in solve_system both matrix and *blockJacobiForGPUILU0_ diagonal entries
+                //are checked and potentially overwritten in replaceZeroDiagonal() by mainThread. However, no matter the thread writing sequence,
+                //the final entry in jacMat is correct.
+                copyThread = std::make_shared<std::thread>([&](){this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);});
+            }
+            else {
+                this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
+            }
+            t_total += t.stop();
+            if(verbosity >= 3) {
+                    std::cout << "-BdaSolverInfo::apply cum copyMatToBlockJac time: " << t_total << "(+" << t.elapsed() << ")\n";
+            }
 
+            Dune::Timer t2;
             // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
             bridge_->solve_system(&matrix, blockJacobiForGPUILU0_.get(),
                                   numJacobiBlocks_, rhs, *wellContribs, result);
+            t_solve += t2.stop();
+            if(verbosity >= 3) {
+                std::cout << "-BdaSolverInfo::apply cum solve_system time: " << t_solve << "(+" << t2.elapsed() << ")\n";
+            }
         }
         else
-          bridge_->solve_system(&matrix, &matrix,
+        {
+            Dune::Timer t2;
+            bridge_->solve_system(&matrix, &matrix,
                                   numJacobiBlocks_, rhs, *wellContribs, result);
+            t_solve += t2.stop();
+            if(verbosity >= 3) {
+                std::cout << "-BdaSolverInfo::apply cum solve_system time: " << t_solve << "(+" << t2.elapsed() << ")\n";
+            }
+        }
+          
+
         if (result.converged) {
             // get result vector x from non-Dune backend, iff solve was successful
             bridge_->get_result(x);

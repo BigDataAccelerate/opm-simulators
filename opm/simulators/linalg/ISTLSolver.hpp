@@ -376,11 +376,21 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         void prepare(const Matrix& M, Vector& b)
         {
+            const int verbosity = prm_[activeSolverNum_].get("verbosity", 0);
+            
             OPM_TIMEBLOCK(istlSolverPrepare);
+            Dune::Timer t1;
+            static double t_total = 0.0;
 
             initPrepare(M,b);
 
             prepareFlexibleSolver();
+            
+            t_total += t1.stop();
+            if(verbosity >=3)
+            {
+                std::cout << "-ISTLSolverEbos::prepare cum total time: " << t_total << "(+" << t1.elapsed() << ")\n";
+            }
         }
 
 
@@ -411,6 +421,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         {
             OPM_TIMEBLOCK(istlSolverSolve);
             ++solveCount_;
+            Dune::Timer t;
+            static double t_total = 0.0;
+            static double t_conv = 0.0;
             // Write linear system if asked for.
             const int verbosity = prm_[activeSolverNum_].get("verbosity", 0);
             const bool write_matrix = verbosity > 10;
@@ -429,9 +442,18 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 flexibleSolver_[activeSolverNum_].solver_->apply(x, *rhs_, result);
             }
 
+            t_total += t.stop();
+            
+            Dune::Timer t2;
             // Check convergence, iterations etc.
             checkConvergence(result);
 
+            t_conv += t2.stop();
+            if(verbosity >=3)
+            {
+                std::cout << "---ISTLSolverEbos::solve cum conv time: " << t_conv << "(+" << t2.elapsed() << ")\n";
+                std::cout << "-ISTLSolverEbos::solve cum total time: " << t_total << "(+" << t.elapsed() << ")\n";
+            }
             return converged_;
         }
 

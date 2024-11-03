@@ -75,6 +75,7 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     auto *matToDecompose = jacMat ? jacMat : mat; // decompose jacMat if valid, otherwise decompose mat
 
     if (opencl_ilu_parallel) {
+        Timer t_convert;
         toOrder.resize(Nb);
         fromOrder.resize(Nb);
         CSCRowIndices.resize(matToDecompose->nnzbs);
@@ -82,12 +83,13 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 
         LUmat = std::make_unique<BlockedMatrix<Scalar>>(*matToDecompose);
 
-        Timer t_convert;
         csrPatternToCsc(matToDecompose->colIndices, matToDecompose->rowPointers,
                         CSCRowIndices.data(), CSCColPointers.data(), Nb);
-        if(verbosity >= 3){
+        if(verbosity >= 4){
             std::ostringstream out;
-            out << "openclBILU0 convert CSR to CSC: " << t_convert.stop() << " s";
+            c_convert += t_convert.stop();
+            out << "---------openclBILU0 convert CSR to CSC: " << t_convert.elapsed() << " s\n";
+            out << "-------openclBILU0 convert CSR to CSC (cum): " << c_convert << " s";
             OpmLog::info(out.str());
         }
     } else {
@@ -111,8 +113,10 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
         }
     }
 
-    if (verbosity >= 1) {
-        out << "openclBILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
+    if (verbosity >= 4) {
+        c_analysis += t_analysis.stop();
+        out << "---------openclBILU0 analysis took: " << t_analysis.elapsed() << " s, " << numColors << " colors\n";
+        out << "-------openclBILU0 cum analysis took: " << c_analysis << " s, " << numColors << " colors";
     }
 
 #if CHOW_PATEL
@@ -211,9 +215,11 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     memcpy(LUmat->nnzValues, matToDecompose->nnzValues,
            sizeof(Scalar) * bs * bs * matToDecompose->nnzbs);
 
-    if (verbosity >= 3){
+    if (verbosity >= 4){
         std::ostringstream out;
-        out << "openclBILU0 memcpy: " << t_copy.stop() << " s";
+        c_cpucopy += t_copy.stop();
+        out << "---------openclBILU0 memcpy inplace: " << t_copy.elapsed() << " s\n";
+        out << "-------openclBILU0 cum memcpy inplace: " << c_cpucopy << " s";
         OpmLog::info(out.str());
     }
 
@@ -259,9 +265,11 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
         OPM_THROW(std::logic_error, "openclBILU0 OpenCL enqueueWriteBuffer error");
     }
 
-    if (verbosity >= 3) {
+    if (verbosity >= 4) {
         std::ostringstream out;
-        out << "openclBILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
+        c_copy += t_copyToGpu.stop();
+        out << "---------openclBILU0 copy to GPU: " << t_copyToGpu.elapsed() << " s\n";
+        out << "-------openclBILU0 cum copy to GPU: " << c_copy << " s";
         OpmLog::info(out.str());
     }
 
@@ -279,9 +287,11 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
                                           s.invDiagVals, rowsPerColor[color], block_size);
     }
 
-    if (verbosity >= 3) {
+    if (verbosity >= 4) {
         queue->finish();
-        out << "openclBILU0 decomposition: " << t_decomposition.stop() << " s";
+        c_decomp += t_decomposition.stop();
+        out << "---------openclBILU0 decomposition: " << t_decomposition.elapsed() << " s\n";
+        out << "-------openclBILU0 cum decomposition: " << c_decomp << " s";
         OpmLog::info(out.str());
     }
 #endif // CHOW_PATEL
@@ -328,7 +338,9 @@ void openclBILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "openclBILU0 apply: " << t_apply.stop() << " s";
+        c_apply += t_apply.stop();
+        out << "---------openclBILU0 apply: " << t_apply.elapsed() << " s\n";
+        out << "-------openclBILU0 cum apply: " << c_apply << " s";
         OpmLog::info(out.str());
     }
 }

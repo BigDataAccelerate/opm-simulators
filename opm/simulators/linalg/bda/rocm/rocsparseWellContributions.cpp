@@ -18,6 +18,7 @@
 */
 
 #include <config.h> // CMake
+#include <dune/common/timer.hh>
 
 // MultisegmentWellContribution includes the cuda runtime if found by CMake
 // this leads to inclusion of both amd_hip_vector_types.h and vector_types.h
@@ -45,6 +46,8 @@
 
 namespace Opm
 {
+
+using Dune::Timer;
 
 #ifdef __HIP__
 /// HIP kernel to apply the standard wellcontributions
@@ -161,6 +164,8 @@ template<class Scalar>
 void WellContributionsRocsparse<Scalar>::
 apply_mswells(Scalar* d_x, Scalar* d_y)
 {
+    Dune::Timer t_copy, t_umfcompute(false);
+    
     if (h_x.empty()) {
         h_x.resize(this->N);
         h_y.resize(this->N);
@@ -170,14 +175,41 @@ apply_mswells(Scalar* d_x, Scalar* d_y)
     HIP_CHECK(hipMemcpyAsync(h_y.data(), d_y, sizeof(Scalar) * this->N, hipMemcpyDeviceToHost, stream));
     HIP_CHECK(hipStreamSynchronize(stream));
 
+//     if (verbosity >= 3) 
+    {
+        std::ostringstream out;
+        c_copy += t_copy.stop();
+        out << "-----rocsparseWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <DH>)";
+        OpmLog::info(out.str());
+        t_umfcompute.start();
+    }
+    
     // actually apply MultisegmentWells
     for (auto& well : this->multisegments) {
         well->apply(h_x.data(), h_y.data());
     }
 
+//     if (verbosity >= 3) 
+ {
+        std::ostringstream out;
+        c_umfcompute += t_umfcompute.stop();
+        out << "-----rocsparseWellContributions cum compute mswells: " << c_umfcompute << "s (+" << t_umfcompute.elapsed() << "s)";
+        OpmLog::info(out.str());
+        t_copy.start();
+    }
+    
     // copy vector y from CPU to GPU
     HIP_CHECK(hipMemcpyAsync(d_y, h_y.data(), sizeof(Scalar) * this->N, hipMemcpyHostToDevice, stream));
     HIP_CHECK(hipStreamSynchronize(stream));
+    
+//     if (verbosity >= 3) 
+    {
+        std::ostringstream out;
+        c_copy += t_copy.stop();
+        out << "-----rocsparseWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <HD>)";
+        OpmLog::info(out.str());
+        t_umfcompute.start();
+    }
 }
 
 template<class Scalar>

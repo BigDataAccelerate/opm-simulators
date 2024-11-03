@@ -18,6 +18,7 @@
 */
 
 #include <config.h> // CMake
+#include <dune/common/timer.hh>
 #include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -25,9 +26,12 @@
 
 #include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
 
+#include <sstream> //Razvan
+
 namespace Opm {
 
 using Accelerator::OpenclKernels;
+using Dune::Timer;
 
 template<class Scalar>
 void WellContributionsOCL<Scalar>::
@@ -47,8 +51,12 @@ void WellContributionsOCL<Scalar>::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y
 }
 
 template<class Scalar>
-void WellContributionsOCL<Scalar>::apply_mswells(cl::Buffer d_x, cl::Buffer d_y)
+void WellContributionsOCL<Scalar>::
+apply_mswells(cl::Buffer d_x, 
+              cl::Buffer d_y)
 {
+    Dune::Timer t_copy, t_umfcompute(false);
+    
     if (h_x.empty()) {
         h_x.resize(this->N);
         h_y.resize(this->N);
@@ -62,17 +70,44 @@ void WellContributionsOCL<Scalar>::apply_mswells(cl::Buffer d_x, cl::Buffer d_y)
     cl::WaitForEvents(events);
     events.clear();
 
+//     if (verbosity >= 3) 
+//     {
+//         std::ostringstream out;
+//         c_copy += t_copy.stop();
+//         out << "-----openclWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <DH>)";
+//         OpmLog::info(out.str());
+//         t_umfcompute.start();
+//     }
+    
     // actually apply MultisegmentWells
     for (auto& well : this->multisegments) {
         well->apply(h_x.data(), h_y.data());
     }
 
+//     if (verbosity >= 3) 
+// {
+//         std::ostringstream out;
+//         c_umfcompute += t_umfcompute.stop();
+//         out << "-----openclWellContributions cum compute mswells: " << c_umfcompute << "s (+" << t_umfcompute.elapsed() << "s)";
+//         OpmLog::info(out.str());
+//         t_copy.start();
+//     }
+    
     // copy vector y from CPU to GPU
     events.resize(1);
     queue->enqueueWriteBuffer(d_y, CL_FALSE, 0, sizeof(Scalar) * this->N,
                               h_y.data(), nullptr, &events[0]);
     events[0].wait();
     events.clear();
+    
+//     if (verbosity >= 3) 
+//     {
+//         std::ostringstream out;
+//         c_copy += t_copy.stop();
+//         out << "-----openclWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <HD>)";
+//         OpmLog::info(out.str());
+//         t_umfcompute.start();
+//     }
 }
 
 template<class Scalar>

@@ -150,6 +150,9 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
         static_cast<WellContributionsRocsparse<Scalar>&>(wellContribs).setStream(stream);
     }
 
+    if (verbosity >= 3) {
+        t_spmv.start();
+    }
 // HIP_VERSION is defined as (HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH)
 #if HIP_VERSION >= 60000000
     if constexpr (std::is_same_v<Scalar,float>) {
@@ -188,6 +191,12 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
                                             d_x, &zero, d_r));
     }
 #endif
+
+    if (verbosity >= 3) {
+        t_spmv.stop();
+        t_rest.start();
+    }
+
     if constexpr (std::is_same_v<Scalar,float>) {
         ROCBLAS_CHECK(rocblas_sscal(blas_handle, N, &mone, d_r, 1));
         ROCBLAS_CHECK(rocblas_saxpy(blas_handle, N, &one, d_b, 1, d_r, 1));
@@ -202,16 +211,19 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
         ROCBLAS_CHECK(rocblas_dnrm2(blas_handle, N, d_r, 1, &norm_0));
     }
 
-    if (verbosity >= 2) {
+    if (verbosity >= 3) {
+        t_rest.stop();
+    }
+    if (verbosity == 2) {
         std::ostringstream out;
         out << std::scientific << "rocsparseSolver initial norm: " << norm_0;
         OpmLog::info(out.str());
     }
 
-    if (verbosity >= 3) {
-        t_rest.start();
-    }
     for (it = 0.5; it < maxit; it += 0.5) {
+        if (verbosity >= 3) {
+            t_rest.start();
+        }
         rhop = rho;
         if constexpr (std::is_same_v<Scalar,float>) {
             ROCBLAS_CHECK(rocblas_sdot(blas_handle, N, d_rw, 1, d_r, 1, &rho));
@@ -423,9 +435,10 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
             break;
         }
 
-        if (verbosity > 1) {
+        if (verbosity == 2) {
             std::ostringstream out;
-            out << "it: " << it << std::scientific << ", norm: " << norm;
+        out << "=== converged: " << res.converged << ", conv_rate: " << res.conv_rate << ", time: " << res.elapsed << \
+            ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
             OpmLog::info(out.str());
         }
     }
@@ -436,7 +449,7 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
     res.elapsed = t_total.stop();
     res.converged = (it != (maxit + 0.5));
 
-    if (verbosity >= 1) {
+    if (verbosity >= 2) {
         std::ostringstream out;
         out << "=== converged: " << res.converged
             << ", conv_rate: " << res.conv_rate
@@ -445,13 +458,24 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
             << ", iterations: " << it;
         OpmLog::info(out.str());
     }
+    
+    c_prec += t_prec.elapsed();
+    c_spmv += t_spmv.elapsed();
+    c_rest += t_rest.elapsed();
+    c_well += t_well.elapsed();
+    c_total1 += t_total.elapsed();
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "rocsparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
-        out << "rocsparseSolver::spmv:        " << t_spmv.elapsed() << " s\n";
-        out << "rocsparseSolver::well:        " << t_well.elapsed() << " s\n";
-        out << "rocsparseSolver::rest:        " << t_rest.elapsed() << " s\n";
-        out << "rocsparseSolver::total_solve: " << res.elapsed << " s\n";
+        out << "-----rocsparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
+        out << "-----rocsparseSolver::spmv:        " << t_spmv.elapsed() << " s\n";
+        out << "-----rocsparseSolver::well:        " << t_well.elapsed() << " s\n";
+        out << "-----rocsparseSolver::rest:        " << t_rest.elapsed() << " s\n";
+        out << "---rocsparseSolver::total_solve: " << res.elapsed << " s\n";
+        out << "-----rocsparseSolver::cum prec_apply:  " << c_prec << " s\n";
+        out << "-----rocsparseSolver::cum spmv:        " << c_spmv << " s\n";
+        out << "-----rocsparseSolver::cum well:        " << c_well << " s\n";
+        out << "-----rocsparseSolver::cum rest:        " << c_rest << " s\n";
+        out << "---rocsparseSolver::cum total_solve1: " << c_total1 << " s";
         OpmLog::info(out.str());
     }
 }
@@ -620,7 +644,9 @@ analyze_matrix()
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
         std::ostringstream out;
-        out << "rocsparseSolver::analyze_matrix(): " << t.stop() << " s";
+        c_analysis += t.stop();
+        out << "-----rocsparseSolver::analyse_matrix(): " << t.elapsed() << " s";
+        out << "-rocsparseSolver::cum analyse_matrix(): " << c_analysis << " s";
         OpmLog::info(out.str());
     }
 
@@ -633,7 +659,17 @@ template<class Scalar, unsigned int block_size>
 bool rocsparseSolverBackend<Scalar,block_size>::
 create_preconditioner()
 {
-    return prec->create_preconditioner(&*mat);
+    Timer t;
+    bool result;
+    result =  prec->create_preconditioner(&*mat);
+    if (verbosity >= 3) {
+        std::ostringstream out;
+        c_decomp += t.stop();
+        out << "-----rocsparseSolver::create_preconditioner(): " << t.elapsed() << " s\n";
+        out << "---rocsparseSolver::cum decomp: " << c_decomp << " s";
+        OpmLog::info(out.str());
+    }
+    return result;
 } // end create_preconditioner()
 
 template<class Scalar, unsigned int block_size>
@@ -651,6 +687,14 @@ solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res)
         out << "rocsparseSolver::solve_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
+    
+    if (verbosity >= 3) {
+        std::ostringstream out;
+        c_total2 += t.stop();
+        out << "-----rocsparseSolver::solve_system(): " << t.elapsed() << " s\n";
+        out << "---rocsparseSolver::cum solve total2: " << c_total2 << " s";
+        OpmLog::info(out.str());
+    }
 } // end solve_system()
 
 // copy result to host memory
@@ -666,8 +710,10 @@ get_result(Scalar* x)
     HIP_CHECK(hipStreamSynchronize(stream)); // always wait, caller might want to use x immediately
 
     if (verbosity >= 3) {
+        c_result += t.stop();
         std::ostringstream out;
-        out << "rocsparseSolver::get_result(): " << t.stop() << " s";
+        out << "-----rocsparseSolver::get_result(): " << t.elapsed() << " s";
+        out << "---rocsparseSolver::cum copy get_result(): " << c_result << " s";
         OpmLog::info(out.str());
     }
 } // end get_result()
