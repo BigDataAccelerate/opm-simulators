@@ -94,7 +94,7 @@ cusparseSolverBackend<Scalar,block_size>::~cusparseSolverBackend()
 
 template<class Scalar, unsigned int block_size>
 void cusparseSolverBackend<Scalar,block_size>::
-gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res)
+gpu_pbicgstab(WellContributions<Scalar>& wellContribs, GpuResult& res)
 {
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
     int n = N;
@@ -763,7 +763,7 @@ create_preconditioner()
 
 template<class Scalar, unsigned int block_size>
 void cusparseSolverBackend<Scalar,block_size>::
-solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res)
+solve_system(WellContributions<Scalar>& wellContribs, GpuResult& res)
 {
     Timer t;
     // actually solve
@@ -805,7 +805,7 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
              Scalar* b,
              std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
              WellContributions<Scalar>& wellContribs,
-             BdaResult& res)
+             GpuResult& res)
 {
     if (initialized == false) {
         initialize(matrix, jacMatrix);
@@ -815,15 +815,15 @@ solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
     }
     if (analysis_done == false) {
         if (!analyse_matrix()) {
-            return SolverStatus::BDA_SOLVER_ANALYSIS_FAILED;
+            return SolverStatus::GPU_SOLVER_ANALYSIS_FAILED;
         }
     }
     if (create_preconditioner()) {
         solve_system(wellContribs, res);
     } else {
-        return SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED;
+        return SolverStatus::GPU_SOLVER_CREATE_PRECONDITIONER_FAILED;
     }
-    return SolverStatus::BDA_SOLVER_SUCCESS;
+    return SolverStatus::GPU_SOLVER_SUCCESS;
 }
 
 #define INSTANTIATE_TYPE(T)                    \
