@@ -449,7 +449,7 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
     res.elapsed = t_total.stop();
     res.converged = (it != (maxit + 0.5));
 
-    if (verbosity >= 2) {
+    if (verbosity == 2) {
         std::ostringstream out;
         out << "=== converged: " << res.converged
             << ", conv_rate: " << res.conv_rate

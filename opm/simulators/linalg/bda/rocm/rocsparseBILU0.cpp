@@ -365,7 +365,7 @@ apply(Scalar& y, Scalar& x) {
                                                d_buffer));
     }
         
-    if (verbosity >= 3) {
+    if (verbosity >= 4) {
         std::ostringstream out;
         HIP_CHECK(hipStreamSynchronize(this->stream));
         out << "rocsparseBILU0 apply: " << t_apply.stop() << " s";
