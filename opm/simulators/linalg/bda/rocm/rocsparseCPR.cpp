@@ -313,7 +313,7 @@ apply(Scalar& y,
 
     bilu0->apply(y, x);
 
-    if (verbosity >= 3) {
+    if (verbosity >= 4) {
         HIP_CHECK(hipStreamSynchronize(this->stream));
         std::ostringstream out;
         out << "rocsparseCPR apply bilu0(): " << t_bilu0.stop() << " s";
@@ -322,7 +322,7 @@ apply(Scalar& y,
 
     Dune::Timer t_amg;
     apply_amg(y, x);
-    if (verbosity >= 3) {
+    if (verbosity >= 4) {
         std::ostringstream out;
         out << "rocsparseCPR apply amg(): " << t_amg.stop() << " s";
         OpmLog::info(out.str());
