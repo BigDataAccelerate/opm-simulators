@@ -101,7 +101,7 @@ private:
 /// as a block-structured matrix (one block for all cell variables) for a fixed
 /// number of cell variables np .
 template <class TypeTag>
-class ISTLSolverGpu : public ISTLSolver<TypeTag>
+class ISTLSolverGpuBridge : public ISTLSolver<TypeTag>
 {
 protected:
     using ParentType = ISTLSolver<TypeTag>;
@@ -135,7 +135,7 @@ public:
     /// \param[in] simulator   The opm-models simulator object
     /// \param[in] parameters  Explicit parameters for solver setup, do not
     ///                        read them from command line parameters.
-    ISTLSolverGpu(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
+    ISTLSolverGpuBridge(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
         : ParentType(simulator, parameters)
     {
         initializeGpu();
@@ -143,7 +143,7 @@ public:
 
     /// Construct a system solver.
     /// \param[in] simulator   The opm-models simulator object
-    explicit ISTLSolverGpu(const Simulator& simulator)
+    explicit ISTLSolverGpuBridge(const Simulator& simulator)
         : ParentType(simulator)
     {
         initializeGpu();
@@ -238,7 +238,7 @@ public:
             return ParentType::solve(x);
         }
 
-        OPM_TIMEBLOCK(istlSolverGpuSolve);
+        OPM_TIMEBLOCK(istlSolverGpuBridgeSolve);
         this->solveCount_ += 1;
         // Write linear system if asked for.
         const int verbosity = this->prm_[this->activeSolverNum_].template get<int>("verbosity", 0);
