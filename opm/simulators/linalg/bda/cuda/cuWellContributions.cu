@@ -168,6 +168,8 @@ void WellContributionsCuda<Scalar>::APIalloc()
 template<class Scalar>
 void WellContributionsCuda<Scalar>::apply(Scalar* d_x, Scalar* d_y)
 {
+    Dune::Timer t_copy, t_umfcompute(false);
+    
     // apply MultisegmentWells
 
     // make sure the stream is empty if timing measurements are done
@@ -187,15 +189,38 @@ void WellContributionsCuda<Scalar>::apply(Scalar* d_x, Scalar* d_y)
                         cudaMemcpyDeviceToHost, stream);
         cudaStreamSynchronize(stream);
 
+    {
+        std::ostringstream out;
+        c_copy += t_copy.stop();
+        out << "-----cusparseWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <DH>)";
+        OpmLog::info(out.str());
+        t_umfcompute.start();
+    }
+        
         // actually apply MultisegmentWells
         for (auto& well : this->multisegments) {
             well->apply(h_x, h_y);
         }
 
+ {
+        std::ostringstream out;
+        c_umfcompute += t_umfcompute.stop();
+        out << "-----cusparseWellContributions cum compute mswells: " << c_umfcompute << "s (+" << t_umfcompute.elapsed() << "s)";
+        OpmLog::info(out.str());
+        t_copy.start();
+    }
+
         // copy vector y from CPU to GPU
         cudaMemcpyAsync(d_y, h_y, sizeof(Scalar) * this->N,
                         cudaMemcpyHostToDevice, stream);
         cudaStreamSynchronize(stream);
+        
+    {
+        std::ostringstream out;
+        c_copy += t_copy.stop();
+        out << "-----cusparseWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <HD>)";
+        OpmLog::info(out.str());
+    }        
     }
 
     // apply StandardWells
