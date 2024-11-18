@@ -71,9 +71,6 @@ protected:
     unsigned int *d_val_pointers = nullptr;
     Scalar* h_x = nullptr;
     Scalar* h_y = nullptr;
-    
-    double c_copy = 0.0;
-    double c_umfcompute = 0.0;
 };
 
 } //namespace Opm
