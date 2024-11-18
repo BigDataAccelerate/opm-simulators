@@ -79,6 +79,8 @@ private:
     double c_well = 0.0;
     double c_result = 0.0;
     double c_analysis = 0.0;
+    double c_well_copy = 0.0;
+    double c_well_compute = 0.0;
 
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A

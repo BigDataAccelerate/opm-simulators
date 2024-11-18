@@ -189,11 +189,12 @@ void WellContributionsCuda<Scalar>::apply(Scalar* d_x, Scalar* d_y)
                         cudaMemcpyDeviceToHost, stream);
         cudaStreamSynchronize(stream);
 
+    if (this->verbosity >= 3) 
     {
         std::ostringstream out;
-        c_copy += t_copy.stop();
-        out << "-----cusparseWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <DH>)";
-        OpmLog::info(out.str());
+        this->c_copy += t_copy.stop();
+//         out << "-----cusparseWellContributions cum copy mswells: " << this->c_copy << "s (+" << t_copy.elapsed() << "s <DH>)";
+//         OpmLog::info(out.str());
         t_umfcompute.start();
     }
         
@@ -202,11 +203,13 @@ void WellContributionsCuda<Scalar>::apply(Scalar* d_x, Scalar* d_y)
             well->apply(h_x, h_y);
         }
 
+    if (this->verbosity >= 3) 
  {
         std::ostringstream out;
-        c_umfcompute += t_umfcompute.stop();
-        out << "-----cusparseWellContributions cum compute mswells: " << c_umfcompute << "s (+" << t_umfcompute.elapsed() << "s)";
-        OpmLog::info(out.str());
+        this->c_umfcompute += t_umfcompute.stop();
+//         out << "-----cusparseWellContributions cum compute mswells: " << this->c_umfcompute << "s (+" << t_umfcompute.elapsed() << "s)";
+//         OpmLog::info(out.str());
+        t_copy.reset();
         t_copy.start();
     }
 
@@ -215,11 +218,12 @@ void WellContributionsCuda<Scalar>::apply(Scalar* d_x, Scalar* d_y)
                         cudaMemcpyHostToDevice, stream);
         cudaStreamSynchronize(stream);
         
+    if (this->verbosity >= 3) 
     {
         std::ostringstream out;
-        c_copy += t_copy.stop();
-        out << "-----cusparseWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <HD>)";
-        OpmLog::info(out.str());
+        this->c_copy += t_copy.stop();
+//         out << "-----cusparseWellContributions cum copy mswells: " << this->c_copy << "s (+" << t_copy.elapsed() << "s <HD>)";
+//         OpmLog::info(out.str());
     }        
     }
 

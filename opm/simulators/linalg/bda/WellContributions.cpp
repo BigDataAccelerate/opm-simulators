@@ -142,7 +142,7 @@ void WellContributions<Scalar>::addNumBlocks(unsigned int numBlocks)
 }
 
 template<class Scalar>
-void WellContributions<Scalar>::alloc()
+void WellContributions<Scalar>::alloc(int verbosity)
 {
     if (num_std_wells > 0) {
         val_pointers.resize(num_std_wells+1);
@@ -150,6 +150,7 @@ void WellContributions<Scalar>::alloc()
         this->APIalloc();
         allocated = true;
     }
+    this->verbosity = verbosity;
 }
 
 template<class Scalar>

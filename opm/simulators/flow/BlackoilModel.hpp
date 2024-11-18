@@ -424,6 +424,7 @@ namespace Opm {
                                                        const SimulatorTimerInterface& timer,
                                                        NonlinearSolverType& nonlinear_solver)
         {
+static int nliter = 0;
             int verbosity = Parameters::Get<Parameters::LinearSolverVerbosity>();
 //             EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
 
@@ -458,7 +459,7 @@ namespace Opm {
                                           simulator().model().linearizer().residual());
                     t_wells += t2.stop();
                     if(verbosity>=3){
-                        std::cout << "BlackoilModelEbos::nonlinearIteration cum well time: " << t_wells << "\n";
+                        std::cout << "BlackoilModelEbos::nonlinearIterationNewton cum well time: " << t_wells << "\n";
                     }
 
                     t3.start();
@@ -471,7 +472,7 @@ namespace Opm {
                     report.total_linear_iterations += linearIterationsLastSolve();
                     
                     if(verbosity>=3) {
-                        std::cout << "BlackoilModelEbos::nonlinearIteration cum solve time: " << t_solve << " (+" << t3.elapsed() << ")\n";
+                        std::cout << "BlackoilModelEbos::nonlinearIterationNewton cum solve time: " << t_solve << " (+" << t3.elapsed() << ")\n";
                         std::cout << "BlackoilModelEbos::report.linear_solve_time(cum): " << report.linear_solve_time << "\n";
                     }
                 }
@@ -491,9 +492,12 @@ namespace Opm {
 
                 t_total += t1.stop();
                 if(verbosity>=3) {
-                    std::cout << "========== BlackoilModelEbos::nonlinearIteration cum time: " << t_total << "(+" << t1.elapsed() << ") ========\n\n";
+                    std::cout << "========== BlackoilModelEbos::nonlinearIterationNewton cum time: " << t_total << "(+" << t1.elapsed() << ") ========\n\n";
                 }
-// std::cout << " Exiting in BlackoilModel.hpp...\n"; exit(0);//Razvan                
+if(nliter++ == 2){ std::cout << " Exiting in BlackoilModel.hpp...\n"; exit(0);//Razvan              
+}
+else std::cout << "nliter = " << nliter << std::endl;
+    
                 perfTimer.reset();
                 perfTimer.start();
 

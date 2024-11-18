@@ -61,10 +61,13 @@ public:
         D,
         B
     };
+    double c_copy = 0.0;
+    double c_umfcompute = 0.0;
 
 protected:
     bool allocated = false;
-
+    int verbosity; 
+    
     unsigned int N;                          // number of rows (not blockrows) in vectors x and y
     unsigned int dim;                        // number of columns in blocks in B and C, equal to StandardWell::numEq
     unsigned int dim_wells;                  // number of rows in blocks in B and C, equal to StandardWell::numStaticWellEq
@@ -87,7 +90,7 @@ public:
     void addNumBlocks(unsigned int numBlocks);
 
     /// Allocate memory for the StandardWells
-    void alloc();
+    void alloc(int verbosity);
 
     /// Empty destructor.
     virtual ~WellContributions();

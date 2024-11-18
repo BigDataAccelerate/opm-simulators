@@ -70,28 +70,29 @@ apply_mswells(cl::Buffer d_x,
     cl::WaitForEvents(events);
     events.clear();
 
-//     if (verbosity >= 3) 
-//     {
-//         std::ostringstream out;
-//         c_copy += t_copy.stop();
-//         out << "-----openclWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <DH>)";
+    if (this->verbosity >= 3) 
+    {
+        std::ostringstream out;
+        this->c_copy += t_copy.stop();
+//         out << "-----openclWellContributions cum copy mswells: " << this->c_copy << "s (+" << t_copy.elapsed() << "s <DH>)";
 //         OpmLog::info(out.str());
-//         t_umfcompute.start();
-//     }
+        t_umfcompute.start();
+    }
     
     // actually apply MultisegmentWells
     for (auto& well : this->multisegments) {
         well->apply(h_x.data(), h_y.data());
     }
 
-//     if (verbosity >= 3) 
-// {
-//         std::ostringstream out;
-//         c_umfcompute += t_umfcompute.stop();
-//         out << "-----openclWellContributions cum compute mswells: " << c_umfcompute << "s (+" << t_umfcompute.elapsed() << "s)";
+    if (this->verbosity >= 3) 
+{
+        std::ostringstream out;
+        this->c_umfcompute += t_umfcompute.stop();
+//         out << "-----openclWellContributions cum compute mswells: " << this->c_umfcompute << "s (+" << t_umfcompute.elapsed() << "s)";
 //         OpmLog::info(out.str());
-//         t_copy.start();
-//     }
+        t_copy.reset();
+        t_copy.start();
+    }
     
     // copy vector y from CPU to GPU
     events.resize(1);
@@ -100,14 +101,14 @@ apply_mswells(cl::Buffer d_x,
     events[0].wait();
     events.clear();
     
-//     if (verbosity >= 3) 
-//     {
-//         std::ostringstream out;
-//         c_copy += t_copy.stop();
-//         out << "-----openclWellContributions cum copy mswells: " << c_copy << "s (+" << t_copy.elapsed() << "s <HD>)";
+    if (this->verbosity >= 3) 
+    {
+        std::ostringstream out;
+        this->c_copy += t_copy.stop();
+//         out << "-----openclWellContributions cum copy mswells: " << this->c_copy << "s (+" << t_copy.elapsed() << "s <HD>)";
 //         OpmLog::info(out.str());
-//         t_umfcompute.start();
-//     }
+        t_umfcompute.start();
+    }
 }
 
 template<class Scalar>

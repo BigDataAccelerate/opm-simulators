@@ -1803,7 +1803,7 @@ namespace Opm {
         }
 
         // allocate memory for data from StandardWells
-        wellContribs.alloc();
+        wellContribs.alloc(Parameters::Get<Parameters::LinearSolverVerbosity>());
 
         for(unsigned int i = 0; i < well_container_.size(); i++){
             auto& well = well_container_[i];

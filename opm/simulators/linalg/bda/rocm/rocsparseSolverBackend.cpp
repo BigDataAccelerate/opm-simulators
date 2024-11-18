@@ -464,16 +464,23 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
     c_rest += t_rest.elapsed();
     c_well += t_well.elapsed();
     c_total1 += t_total.elapsed();
+    c_well_copy += wellContribs.c_copy;
+    c_well_compute += wellContribs.c_umfcompute;
+    
     if (verbosity >= 3) {
         std::ostringstream out;
         out << "-----rocsparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
         out << "-----rocsparseSolver::spmv:        " << t_spmv.elapsed() << " s\n";
         out << "-----rocsparseSolver::well:        " << t_well.elapsed() << " s\n";
+        out << "-------copy    time:            " << wellContribs.c_copy << " s\n";
+        out << "-------compute time:            " << wellContribs.c_umfcompute << " s\n";
         out << "-----rocsparseSolver::rest:        " << t_rest.elapsed() << " s\n";
         out << "---rocsparseSolver::total_solve: " << res.elapsed << " s\n";
         out << "-----rocsparseSolver::cum prec_apply:  " << c_prec << " s\n";
         out << "-----rocsparseSolver::cum spmv:        " << c_spmv << " s\n";
         out << "-----rocsparseSolver::cum well:        " << c_well << " s\n";
+        out << "-------cum copy    time:" << c_well_copy << " s\n";
+        out << "-------cum compute time:" << c_well_compute << " s\n";
         out << "-----rocsparseSolver::cum rest:        " << c_rest << " s\n";
         out << "---rocsparseSolver::cum total_solve1: " << c_total1 << " s";
         OpmLog::info(out.str());

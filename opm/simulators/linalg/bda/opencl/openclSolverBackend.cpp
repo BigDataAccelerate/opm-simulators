@@ -426,16 +426,23 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
     c_rest += t_rest.stop();
     c_well += t_well.elapsed();
     c_total1 += t_total.stop();
+    c_well_copy += wellContribs.c_copy;
+    c_well_compute += wellContribs.c_umfcompute;
+    
     if (verbosity >= 3) {
         std::ostringstream out;
         out << "-----openclSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
-        out << "-----wellContributions::apply:  " << t_well.elapsed() << " s\n";
         out << "-----openclSolver::spmv:        " << t_spmv.elapsed() << " s\n";
+        out << "-----openclSolver::well:        " << t_well.elapsed() << " s\n";
+        out << "-------copy    time:            " << wellContribs.c_copy << " s\n";
+        out << "-------compute time:            " << wellContribs.c_umfcompute << " s\n";
         out << "-----openclSolver::rest:        " << t_rest.elapsed() << " s\n";
-        out << "---openclSolver::total_solve: " << res.elapsed << " s\n";
+        out << "---openclSolver::total_solve:   " << res.elapsed << " s\n";
         out << "-----openclSolver::cum prec_apply:  " << c_prec << " s\n";
         out << "-----openclSolver::cum spmv:        " << c_spmv << " s\n";
         out << "-----openclSolver::cum well:        " << c_well << " s\n";
+        out << "-------cum copy    time:" << c_well_copy << " s\n";
+        out << "-------cum compute time:" << c_well_compute << " s\n";
         out << "-----openclSolver::cum rest:        " << c_rest << " s\n";
         out << "---openclSolver::cum total_solve1: " << c_total1 << " s";
         OpmLog::info(out.str());
@@ -611,7 +618,7 @@ analyze_matrix()
     if (verbosity >= 3) {
         std::ostringstream out;
         c_analysis += t.stop();
-        out << "-----openclSolver::analyse_matrix(): " << t.elapsed() << " s";
+        out << "-----openclSolver::analyse_matrix(): " << t.elapsed() << " s\n";
         out << "-openclSolver::cum analyse_matrix(): " << c_analysis << " s";
         OpmLog::info(out.str());
     }
