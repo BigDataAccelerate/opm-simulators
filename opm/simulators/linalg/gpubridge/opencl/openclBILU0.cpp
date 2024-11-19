@@ -213,7 +213,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     memcpy(LUmat->nnzValues, matToDecompose->nnzValues,
            sizeof(Scalar) * bs * bs * matToDecompose->nnzbs);
 
-    if (verbosity >= 4){
+    if (verbosity >= 3){
         std::ostringstream out;
         c_cpucopy += t_copy.stop();
         out << "-------openclBILU0 cum memcpy inplace: " << c_cpucopy << " s (+ " << t_copy.elapsed() << " s)";
@@ -262,7 +262,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
         OPM_THROW(std::logic_error, "openclBILU0 OpenCL enqueueWriteBuffer error");
     }
 
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         std::ostringstream out;
         c_copy += t_copyToGpu.stop();
         out << "-------openclBILU0 cum copy to GPU:    " << c_copy << " s (+" << t_copyToGpu.elapsed() << " s)";
@@ -283,7 +283,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
                                           s.invDiagVals, rowsPerColor[color], block_size);
     }
 
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         queue->finish();
         c_decomp += t_decomposition.stop();
         out << "-------openclBILU0 cum decomposition:  " << c_decomp << " s (+" << t_decomposition.elapsed() << " s)";

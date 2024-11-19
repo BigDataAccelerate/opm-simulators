@@ -437,8 +437,7 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
 
         if (verbosity == 2) {
             std::ostringstream out;
-        out << "=== converged: " << res.converged << ", conv_rate: " << res.conv_rate << ", time: " << res.elapsed << \
-            ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
+            out << "it: " << it << std::scientific << ", norm: " << norm;
             OpmLog::info(out.str());
         }
     }
@@ -676,18 +675,9 @@ solve_system(WellContributions<Scalar>& wellContribs, GpuResult& res)
     gpu_pbicgstab(wellContribs, res);
 
     if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(stream));
         std::ostringstream out;
         c_total2 += t.stop();
         out << "---rocsparseSolver::cum solve total2: " << c_total2 << " s (+ " << t.elapsed() << " s)";
-        OpmLog::info(out.str());
-    }
-    
-    if (verbosity >= 3) {
-        std::ostringstream out;
-        c_total2 += t.stop();
-        out << "-----rocsparseSolver::solve_system(): " << t.elapsed() << " s\n";
-        out << "---rocsparseSolver::cum solve total2: " << c_total2 << " s";
         OpmLog::info(out.str());
     }
 } // end solve_system()

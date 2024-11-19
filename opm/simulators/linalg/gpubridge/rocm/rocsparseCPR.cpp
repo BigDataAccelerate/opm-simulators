@@ -332,7 +332,7 @@ apply(Scalar& y,
 
     bilu0->apply(y, x);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(this->stream));
         c_cprilu0_apply += t_bilu0.stop();
         if(verbosity >= 4){

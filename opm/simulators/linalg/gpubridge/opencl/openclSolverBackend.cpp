@@ -421,6 +421,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
             << ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
+    c_prec += t_prec.elapsed();
     c_spmv += t_spmv.elapsed();
     c_rest += t_rest.elapsed();
     c_well += t_well.elapsed();
