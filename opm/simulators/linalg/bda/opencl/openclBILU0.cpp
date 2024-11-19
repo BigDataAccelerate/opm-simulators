@@ -88,8 +88,7 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
         if(verbosity >= 4){
             std::ostringstream out;
             c_convert += t_convert.stop();
-            out << "---------openclBILU0 convert CSR to CSC: " << t_convert.elapsed() << " s\n";
-            out << "-------openclBILU0 convert CSR to CSC (cum): " << c_convert << " s";
+            out << "-------openclBILU0 convert CSR to CSC (cum): " << c_convert << " s (+ " << t_convert.elapsed() << " s)";
             OpmLog::info(out.str());
         }
     } else {
@@ -115,8 +114,7 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 
     if (verbosity >= 4) {
         c_analysis += t_analysis.stop();
-        out << "---------openclBILU0 analysis took: " << t_analysis.elapsed() << " s, " << numColors << " colors\n";
-        out << "-------openclBILU0 cum analysis took: " << c_analysis << " s, " << numColors << " colors";
+        out << "-------openclBILU0 cum analysis took: " << c_analysis << " s (+" << t_analysis.elapsed() << " s), " << numColors << " colors";
     }
 
 #if CHOW_PATEL
@@ -215,11 +213,10 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     memcpy(LUmat->nnzValues, matToDecompose->nnzValues,
            sizeof(Scalar) * bs * bs * matToDecompose->nnzbs);
 
-    if (verbosity >= 4){
+    if (verbosity >= 3){
         std::ostringstream out;
         c_cpucopy += t_copy.stop();
-        out << "---------openclBILU0 memcpy inplace: " << t_copy.elapsed() << " s\n";
-        out << "-------openclBILU0 cum memcpy inplace: " << c_cpucopy << " s";
+        out << "-------openclBILU0 cum memcpy inplace: " << c_cpucopy << " s (+ " << t_copy.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 
@@ -265,11 +262,10 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
         OPM_THROW(std::logic_error, "openclBILU0 OpenCL enqueueWriteBuffer error");
     }
 
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         std::ostringstream out;
         c_copy += t_copyToGpu.stop();
-        out << "---------openclBILU0 copy to GPU: " << t_copyToGpu.elapsed() << " s\n";
-        out << "-------openclBILU0 cum copy to GPU: " << c_copy << " s";
+        out << "-------openclBILU0 cum copy to GPU:    " << c_copy << " s (+" << t_copyToGpu.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 
@@ -287,11 +283,10 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
                                           s.invDiagVals, rowsPerColor[color], block_size);
     }
 
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         queue->finish();
         c_decomp += t_decomposition.stop();
-        out << "---------openclBILU0 decomposition: " << t_decomposition.elapsed() << " s\n";
-        out << "-------openclBILU0 cum decomposition: " << c_decomp << " s";
+        out << "-------openclBILU0 cum decomposition:  " << c_decomp << " s (+" << t_decomposition.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 #endif // CHOW_PATEL
@@ -336,14 +331,21 @@ void openclBILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     // apply relaxation
     OpenclKernels<Scalar>::scale(x, relaxation, N);
 
-    if (verbosity >= 4) {
-        std::ostringstream out;
-        c_apply += t_apply.stop();
-        out << "---------openclBILU0 apply: " << t_apply.elapsed() << " s\n";
-        out << "-------openclBILU0 cum apply: " << c_apply << " s";
-        OpmLog::info(out.str());
+    if (verbosity >= 3) {
+//         std::ostringstream out;
+        c_ilu0_apply += t_apply.stop();
+//         out << "-------openclBILU0 cum apply: " << c_apply << " s (+" << t_apply.elapsed() << " s)";
+//         OpmLog::info(out.str());
     }
 }
+
+template<class Scalar, unsigned int block_size>
+void openclBILU0<Scalar,block_size>::
+printPrecApplyTimes(std::ostringstream* out)
+{
+        *out << "-------openclCPR::cum ilu0_apply:  " << c_ilu0_apply << " s\n";
+}
+
 
 #define INSTANTIATE_TYPE(T)          \
     template class openclBILU0<T,1>; \

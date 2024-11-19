@@ -79,6 +79,7 @@ update_system_on_gpu(Scalar *vals) {
     bilu0->update_system_on_gpu(vals);
 }
 
+//TODO-RN: can be merged with the other method below
 template <class Scalar, unsigned int block_size>
 bool rocsparseCPR<Scalar, block_size>::
 analyze_matrix(BlockedMatrix<Scalar> *mat_) {
@@ -118,8 +119,9 @@ create_preconditioner(BlockedMatrix<Scalar> *mat_,
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_, jacMat_);
     if (verbosity >= 3) {
+        c_decomp_ilu += t_bilu0.stop(); 
         std::ostringstream out;
-        out << "rocsparseCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        out << "-----rocsparseCPR cum create_preconditioner bilu0(): " << c_decomp_ilu << " s (+" << t_bilu0.elapsed() <<" s)";
         OpmLog::info(out.str());
     }
     
@@ -127,16 +129,24 @@ create_preconditioner(BlockedMatrix<Scalar> *mat_,
     this->create_preconditioner_amg(this->mat);
 
     if (verbosity >= 3) {
+        c_decomp_amg += t_amg.stop();
         std::ostringstream out;
-        out << "rocsparseCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        out << "-----rocsparseCPR cum create_preconditioner_amg():   " << c_decomp_amg << " s (+" << t_amg.elapsed() <<" s)";
         OpmLog::info(out.str());
     }
     
     auto init_func = std::bind(&rocsparseCPR::init_rocm_buffers, this);
     std::call_once(rocm_buffers_allocated, init_func);
 
+    Dune::Timer t_copy_cpr;
     // upload matrices and vectors to GPU
     rocm_upload();
+    if (verbosity >= 3) {
+        c_copy_cpr += t_copy_cpr.stop();
+        std::ostringstream out;
+        out << "-----rocsparseCPR cum rocm_upload():               " << c_copy_cpr << " s (+" << t_copy_cpr.elapsed() <<" s)";
+        OpmLog::info(out.str());
+    }
 
     return result;
 }
@@ -147,8 +157,9 @@ create_preconditioner(BlockedMatrix<Scalar> *mat_) {
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_);
     if (verbosity >= 3) {
+        c_decomp_ilu += t_bilu0.stop(); 
         std::ostringstream out;
-        out << "rocsparseCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        out << "-----rocsparseCPR cum create_preconditioner bilu0(): " << c_decomp_ilu << " s (+" << t_bilu0.elapsed() <<" s)";
         OpmLog::info(out.str());
     }
 
@@ -156,16 +167,24 @@ create_preconditioner(BlockedMatrix<Scalar> *mat_) {
     this->create_preconditioner_amg(this->mat); 
     
     if (verbosity >= 3) {
+        c_decomp_amg += t_amg.stop();
         std::ostringstream out;
-        out << "rocsparseCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        out << "-----rocsparseCPR cum create_preconditioner_amg():   " << c_decomp_amg << " s (+" << t_amg.elapsed() <<" s)";
         OpmLog::info(out.str());
     }
     
     auto init_func = std::bind(&rocsparseCPR::init_rocm_buffers, this);
     std::call_once(rocm_buffers_allocated, init_func);
 
+    Dune::Timer t_copy_cpr;
     // upload matrices and vectors to GPU
     rocm_upload();
+    if (verbosity >= 3) {
+        c_copy_cpr += t_copy_cpr.stop();
+        std::ostringstream out;
+        out << "-----rocsparseCPR cum rocm_upload():               " << c_copy_cpr << " s (+" << t_copy_cpr.elapsed() <<" s)";
+        OpmLog::info(out.str());
+    }
     
     return result;
 }
@@ -313,20 +332,35 @@ apply(Scalar& y,
 
     bilu0->apply(y, x);
 
-    if (verbosity >= 4) {
+    if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(this->stream));
-        std::ostringstream out;
-        out << "rocsparseCPR apply bilu0(): " << t_bilu0.stop() << " s";
-        OpmLog::info(out.str());
+        c_cprilu0_apply += t_bilu0.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------rocsparseCPR apply bilu0(): " << t_bilu0.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
     }
 
     Dune::Timer t_amg;
     apply_amg(y, x);
-    if (verbosity >= 4) {
-        std::ostringstream out;
-        out << "rocsparseCPR apply amg(): " << t_amg.stop() << " s";
-        OpmLog::info(out.str());
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_apply += t_amg.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------rocsparseCPR apply amg(): " << t_amg.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
     }
+}
+
+template<class Scalar, unsigned int block_size>
+void rocsparseCPR<Scalar,block_size>::
+printPrecApplyTimes(std::ostringstream* out)
+{
+        *out << "-------rocsparseCPR::cum ilu0_apply:  " << c_cprilu0_apply << " s\n";
+        *out << "-------rocsparseCPR::cum amg_apply:   " << c_amg_apply << " s\n";
 }
 
 #define INSTANTIATE_TYPE(T)           \

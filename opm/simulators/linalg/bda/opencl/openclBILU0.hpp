@@ -87,7 +87,7 @@ private:
     
     double c_copy = 0.0;
     double c_cpucopy = 0.0;
-    double c_apply = 0.0;
+    double c_ilu0_apply = 0.0;
     double c_convert = 0.0;
     double c_decomp = 0.0;
     double c_analysis = 0.0;
@@ -127,6 +127,9 @@ public:
         return std::make_pair(s.LUvals, s.invDiagVals);
 #endif
     }
+    
+    void printPrecApplyTimes(std::ostringstream* out) override;
+
 };
 
 } // namespace Opm::Accelerator

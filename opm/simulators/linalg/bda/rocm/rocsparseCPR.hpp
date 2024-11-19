@@ -63,6 +63,12 @@ private:
 
     std::unique_ptr<rocsparseSolverBackend<Scalar, 1> > coarse_solver; // coarse solver is scalar
 
+    double c_decomp_amg = 0.0;
+    double c_decomp_ilu = 0.0;
+    double c_copy_cpr = 0.0;
+    double c_amg_apply = 0.0;
+    double c_cprilu0_apply = 0.0;
+    
     // Initialize and allocate matrices and vectors
     void init_rocm_buffers();
 
@@ -133,6 +139,8 @@ public:
     /// Update linear system to GPU
     /// \param[in] b              input vector, contains N values
     void update_system_on_gpu(Scalar *b) override;
+    
+    void printPrecApplyTimes(std::ostringstream* out) override;
 };
 
 } // namespace Opm

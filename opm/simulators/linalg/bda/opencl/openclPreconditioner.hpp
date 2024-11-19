@@ -56,6 +56,8 @@ public:
     // the version with two params can be overloaded, if not, it will default to using the one param version
     virtual bool create_preconditioner(BlockedMatrix<Scalar> *mat) = 0;
     virtual bool create_preconditioner(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat) = 0;
+    
+    virtual void printPrecApplyTimes(std::ostringstream* out) = 0;
 };
 } //namespace Opm
 

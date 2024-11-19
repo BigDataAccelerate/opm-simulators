@@ -85,6 +85,8 @@ public:
                      hipStream_t stream);
     
     void setJacMat(const BlockedMatrix<Scalar>& jacMat);
+    
+    virtual void printPrecApplyTimes(std::ostringstream* out) = 0;
 };
 } //namespace Opm
 

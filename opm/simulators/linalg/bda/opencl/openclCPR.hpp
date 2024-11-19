@@ -69,6 +69,12 @@ private:
 
     std::unique_ptr<openclSolverBackend<Scalar,1>> coarse_solver; // coarse solver is scalar
     bool opencl_ilu_parallel;                   // whether ILU0 operation should be parallelized
+    
+    double c_decomp_amg = 0.0;
+    double c_decomp_ilu = 0.0;
+    double c_copy_cpr = 0.0;
+    double c_amg_apply = 0.0;
+    double c_cprilu0_apply = 0.0;
 
     // Initialize and allocate matrices and vectors
     void init_opencl_buffers();
@@ -100,6 +106,8 @@ public:
     bool create_preconditioner(BlockedMatrix<Scalar>* mat) override;
     bool create_preconditioner(BlockedMatrix<Scalar>* mat,
                                BlockedMatrix<Scalar>* jacMat) override;
+                               
+    void printPrecApplyTimes(std::ostringstream* out) override;
 };
 
 } // namespace Opm::Accelerator

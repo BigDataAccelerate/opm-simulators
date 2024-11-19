@@ -59,6 +59,7 @@ setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQue
     bilu0->setOpencl(context, queue);
 }
 
+//TODO-RN: can be merged with the other method below
 template<class Scalar, unsigned int block_size>
 bool openclCPR<Scalar,block_size>::
 analyze_matrix(BlockedMatrix<Scalar>* mat_) {
@@ -88,12 +89,15 @@ analyze_matrix(BlockedMatrix<Scalar>* mat_, BlockedMatrix<Scalar>* jacMat) {
 
 template<class Scalar, unsigned int block_size>
 bool openclCPR<Scalar,block_size>::
-create_preconditioner(BlockedMatrix<Scalar>* mat_, BlockedMatrix<Scalar>* jacMat) {
+create_preconditioner(BlockedMatrix<Scalar>* mat_, 
+                      BlockedMatrix<Scalar>* jacMat) 
+{
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_, jacMat);
     if (verbosity >= 3) {
+        c_decomp_ilu += t_bilu0.stop(); 
         std::ostringstream out;
-        out << "openclCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        out << "-----openclCPR cum create_preconditioner bilu0(): " << c_decomp_ilu << " s (+" << t_bilu0.elapsed() <<" s)";
         OpmLog::info(out.str());
     }
 
@@ -101,8 +105,9 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_, BlockedMatrix<Scalar>* jacMat
     this->create_preconditioner_amg(this->mat); // already points to bilu0::rmat if needed
     
     if (verbosity >= 3) {
+        c_decomp_amg += t_amg.stop();
         std::ostringstream out;
-        out << "openclCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        out << "-----openclCPR cum create_preconditioner_amg():   " << c_decomp_amg << " s (+" << t_amg.elapsed() <<" s)";
         OpmLog::info(out.str());
     }
     
@@ -110,8 +115,15 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_, BlockedMatrix<Scalar>* jacMat
     auto init_func = std::bind(&openclCPR::init_opencl_buffers, this);
     std::call_once(opencl_buffers_allocated, init_func);
 
+    Dune::Timer t_copy_cpr;
     // upload matrices and vectors to GPU
     opencl_upload();
+    if (verbosity >= 3) {
+        c_copy_cpr += t_copy_cpr.stop();
+        std::ostringstream out;
+        out << "-----openclCPR cum opencl_upload():               " << c_copy_cpr << " s (+" << t_copy_cpr.elapsed() <<" s)";
+        OpmLog::info(out.str());
+    }
 
     return result;
 }
@@ -122,16 +134,18 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_) {
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_);
     if (verbosity >= 3) {
+        c_decomp_ilu += t_bilu0.stop(); 
         std::ostringstream out;
-        out << "openclCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
+        out << "-----openclCPR cum create_preconditioner bilu0(): " << c_decomp_ilu << " s (+" << t_bilu0.elapsed() <<" s)";
         OpmLog::info(out.str());
     }
 
     Dune::Timer t_amg;
     this->create_preconditioner_amg(this->mat); // already points to bilu0::rmat if needed
     if (verbosity >= 3) {
+        c_decomp_amg += t_amg.stop();
         std::ostringstream out;
-        out << "openclCPR create_preconditioner_amg(): " << t_amg.stop() << " s";
+        out << "-----openclCPR cum create_preconditioner_amg():   " << c_decomp_amg << " s (+" << t_amg.elapsed() <<" s)";
         OpmLog::info(out.str());
     }
     
@@ -139,8 +153,15 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_) {
     auto init_func = std::bind(&openclCPR::init_opencl_buffers, this);
     std::call_once(opencl_buffers_allocated, init_func);
 
+    Dune::Timer t_copy_cpr;
     // upload matrices and vectors to GPU
     opencl_upload();
+    if (verbosity >= 3) {
+        c_copy_cpr += t_copy_cpr.stop();
+        std::ostringstream out;
+        out << "-----openclCPR cum opencl_upload():               " << c_copy_cpr << " s (+" << t_copy_cpr.elapsed() <<" s)";
+        OpmLog::info(out.str());
+    }
 
     return result;
 }
@@ -295,23 +316,38 @@ void openclCPR<Scalar,block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x)
 }
 
 template<class Scalar, unsigned int block_size>
-void openclCPR<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
+void openclCPR<Scalar,block_size>::
+apply(const cl::Buffer& y, cl::Buffer& x)
 {
     Dune::Timer t_bilu0;
     bilu0->apply(y, x);
-    if (verbosity >= 4) {
-        std::ostringstream out;
-        out << "openclCPR apply bilu0(): " << t_bilu0.stop() << " s";
-        OpmLog::info(out.str());
+    if (verbosity >= 3) {
+        c_cprilu0_apply += t_bilu0.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------openclCPR apply bilu0(): " << t_bilu0.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
     }
 
     Dune::Timer t_amg;
     apply_amg(y, x);
-    if (verbosity >= 4) {
-        std::ostringstream out;
-        out << "openclCPR apply amg(): " << t_amg.stop() << " s";
-        OpmLog::info(out.str());
+    if (verbosity >= 3) {
+        c_amg_apply += t_amg.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------openclCPR apply amg(): " << t_amg.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
     }
+}
+
+template<class Scalar, unsigned int block_size>
+void openclCPR<Scalar,block_size>::
+printPrecApplyTimes(std::ostringstream* out)
+{
+        *out << "-------openclCPR::cum ilu0_apply:  " << c_cprilu0_apply << " s\n";
+        *out << "-------openclCPR::cum amg_apply:   " << c_amg_apply << " s\n";
 }
 
 #define INSTANTIATE_TYPE(T)        \

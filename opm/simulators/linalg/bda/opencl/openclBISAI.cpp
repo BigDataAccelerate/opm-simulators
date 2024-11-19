@@ -353,6 +353,14 @@ void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
                                 d_invL_x, y, Nb, bs); // application of isaiU is a simple spmv
 }
 
+template<class Scalar, unsigned int block_size>
+void openclBISAI<Scalar,block_size>::
+printPrecApplyTimes(std::ostringstream* out)
+{
+        *out << "-------openclBISAI::cum bisai_apply:  TODO-RN\n";
+}
+
+
 #define INSTANTIATE_TYPE(T)          \
     template class openclBISAI<T,1>; \
     template class openclBISAI<T,2>; \

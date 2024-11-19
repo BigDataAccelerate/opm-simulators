@@ -392,21 +392,13 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res)
 
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "-----cusparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
-        out << "-----cusparseSolver::spmv:        " << t_spmv.elapsed() << " s\n";
-        out << "-----cusparseSolver::well:        " << t_well.elapsed() << " s\n";
-        out << "-------copy    time:              " << wellContribs.c_copy << " s\n";
-        out << "-------compute time:              " << wellContribs.c_umfcompute << " s\n";
-        out << "-----cusparseSolver::rest:        " << t_rest.elapsed() << " s\n";
-        out << "---cusparseSolver::total_solve: " << res.elapsed << " s\n";
-        out << "-----cusparseSolver::cum prec_apply:  " << c_prec << " s\n";
-        out << "-----cusparseSolver::cum spmv:        " << c_spmv << " s\n";
-        out << "-----cusparseSolver::cum well:        " << c_well << " s\n";
-        out << "-------cum copy    time:" << c_well_copy << " s\n";
-        out << "-------cum compute time:" << c_well_compute << " s\n";
-        out << "-----cusparseSolver::cum rest:        " << c_rest << " s\n";
-        out << "---cusparseSolver::cum total_solve1: " << c_total1 << " s";
-
+        out << "-----cusparseSolver::cum prec_apply (ilu0):  " << c_prec << " s (+" << t_prec.elapsed() << "s)\n";
+        out << "-----cusparseSolver::cum spmv:        " << c_spmv << " s (+" << t_spmv.elapsed() << "s)\n";
+        out << "-----cusparseSolver::cum well:        " << c_well << " s (+" << t_well.elapsed() << "s)\n";
+        out << "-------cum copy    time:            " << c_well_copy << " s (+" << wellContribs.c_copy << "s)\n";
+        out << "-------cum compute time:            " << c_well_compute << " s (+" << wellContribs.c_umfcompute << "s)\n";
+        out << "-----cusparseSolver::cum rest:        " << c_rest << " s (+" << t_rest.elapsed() << "s)\n";
+        out << "---cusparseSolver::cum total_solve1:  " << c_total1 << " s (+" << res.elapsed << "s)";
         OpmLog::info(out.str());
     }    
 }
@@ -568,8 +560,7 @@ copy_system_to_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
         
         c_copy += t.stop();
         std::ostringstream out;
-        out << "-----cusparseSolver::copy_system_to_gpu(): " << t.elapsed() << " s\n";
-        out << "---cusparseSolver::cum copy: " << c_copy << " s";
+        out << "---cusparseSolver::cum copy (copy_system_on_gpu): " << c_copy << " s (+ " << t.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 } // end copy_system_to_gpu()
@@ -624,8 +615,7 @@ update_system_on_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
 
         c_copy += t.stop();
         std::ostringstream out;
-        out << "-----cusparseSolver::update_system_on_gpu(): " << t.elapsed() << " s\n";
-        out << "---cusparseSolver::cum copy: " << c_copy << " s";
+        out << "---cusparseSolver::cum copy (update_system_on_gpu): " << c_copy << " s (+ " << t.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
@@ -728,8 +718,7 @@ bool cusparseSolverBackend<Scalar,block_size>::analyse_matrix()
         cudaStreamSynchronize(stream);
         c_analysis += t.stop();
         std::ostringstream out;
-        out << "-----cusparseSolver::analyse_matrix(): " << t.elapsed() << " s";
-        out << "-cusparseSolver::cum analyse_matrix(): " << c_analysis << " s";
+        out << "-cusparseSolver::cum analyse_matrix(): " << c_analysis << " s (+ " << t.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 
@@ -739,7 +728,8 @@ bool cusparseSolverBackend<Scalar,block_size>::analyse_matrix()
 } // end analyse_matrix()
 
 template<class Scalar, unsigned int block_size>
-bool cusparseSolverBackend<Scalar,block_size>::create_preconditioner()
+bool cusparseSolverBackend<Scalar,block_size>::
+create_preconditioner()
 {
     Timer t;
 
@@ -765,8 +755,7 @@ bool cusparseSolverBackend<Scalar,block_size>::create_preconditioner()
         cudaStreamSynchronize(stream);
         std::ostringstream out;
         c_decomp += t.stop();
-        out << "-----cusparseSolver::create_preconditioner(): " << t.elapsed() << " s\n";
-        out << "---cusparseSolver::cum decomp: " << c_decomp << " s";
+        out << "---cusparseSolver::cum decomp:                      " << c_decomp << " s (+ " << t.elapsed() << " s)";
         OpmLog::info(out.str());
     }
     return true;
@@ -786,8 +775,7 @@ solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res)
         cudaStreamSynchronize(stream);
         c_total2 += t.stop();
         std::ostringstream out;
-        out << "-----cusparseSolver::solve_system(): " << t.elapsed() << " s\n";
-        out << "---cusparseSolver::cum solve total2: " << c_total2 << " s";
+        out << "---cusparseSolver::cum solve total2: " << c_total2 << " s (+ " << t.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 } // end solve_system()
@@ -795,7 +783,8 @@ solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res)
 // copy result to host memory
 // caller must be sure that x is a valid array
 template<class Scalar, unsigned int block_size>
-void cusparseSolverBackend<Scalar,block_size>::get_result(Scalar* x)
+void cusparseSolverBackend<Scalar,block_size>::
+get_result(Scalar* x)
 {
     Timer t;
 
@@ -805,8 +794,7 @@ void cusparseSolverBackend<Scalar,block_size>::get_result(Scalar* x)
     if (verbosity >= 3) {
         c_result += t.stop();
         std::ostringstream out;
-        out << "-----cusparseSolver::get_result(): " << t.elapsed() << " s\n";
-        out << "---cusparseSolver::cum copy get_result(): " << c_result << " s";
+        out << "---cusparseSolver::cum copy get_result(): " << c_result << " s (+ " << t.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 } // end get_result()

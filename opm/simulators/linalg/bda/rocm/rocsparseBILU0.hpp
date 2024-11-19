@@ -57,6 +57,13 @@ private:
     Scalar *d_Mvals, *d_t;
     void *d_buffer; // buffer space, used by rocsparse ilu0 analysis
     
+    double c_copy = 0.0;
+    double c_cpucopy = 0.0;
+    double c_ilu0_apply = 0.0;
+    double c_convert = 0.0;
+    double c_decomp = 0.0;
+    double c_analysis = 0.0;
+    
 public:
 
     rocsparseBILU0(int verbosity_);
@@ -114,6 +121,8 @@ public:
     /// Update GPU values after a new assembly is done
     /// \param[in] b     New b vector
     void update_system_on_gpu(Scalar *b) override;
+    
+    void printPrecApplyTimes(std::ostringstream* out) override;
 };
 } // namespace Opm
 

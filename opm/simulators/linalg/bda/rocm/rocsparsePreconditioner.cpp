@@ -73,6 +73,8 @@ setJacMat(const BlockedMatrix<Scalar>& jMat)
     this->jacMat = std::make_shared<BlockedMatrix<Scalar>>(jMat);
 }
 
+
+
 #define INSTANTIATE_TYPE(T)                      \
     template class rocsparsePreconditioner<T,1>; \
     template class rocsparsePreconditioner<T,2>; \

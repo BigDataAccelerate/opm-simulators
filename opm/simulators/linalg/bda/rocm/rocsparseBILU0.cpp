@@ -114,6 +114,7 @@ analyze_matrix(BlockedMatrix<Scalar>*,
     ROCSPARSE_CHECK(rocsparse_set_mat_fill_mode(descr_U, rocsparse_fill_mode_upper));
     ROCSPARSE_CHECK(rocsparse_set_mat_diag_type(descr_U, rocsparse_diag_type_non_unit));
 
+    Timer t_analysis;
     if constexpr (std::is_same_v<Scalar,float>) {
         ROCSPARSE_CHECK(rocsparse_sbsrilu0_buffer_size(this->handle, this->dir, Nb,
                                                        this->nnzbs_prec, descr_M,
@@ -175,6 +176,13 @@ analyze_matrix(BlockedMatrix<Scalar>*,
     rocsparse_status status = rocsparse_bsrilu0_zero_pivot(this->handle, ilu_info, &zero_position);
     if (rocsparse_status_success != status) {
         printf("L has structural and/or numerical zero at L(%d,%d)\n", zero_position, zero_position);
+        if (verbosity >= 4) {
+            HIP_CHECK(hipStreamSynchronize(this->stream));
+            c_analysis += t_analysis.stop();
+            std::ostringstream out;
+            out << "-------rocsparseBILU0::analyze_matrix(): " << c_analysis << " s (+" << t_analysis.elapsed() << " s)";
+            OpmLog::info(out.str());
+        }
         return false;
     }
 
@@ -207,10 +215,11 @@ analyze_matrix(BlockedMatrix<Scalar>*,
                                                   rocsparse_solve_policy_auto, d_buffer));
     }
 
-    if (verbosity >= 3) {
+    if (verbosity >= 4) {
     	HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_analysis += t_analysis.stop();
         std::ostringstream out;
-        out << "rocsparseBILU0::analyze_matrix(): " << t.stop() << " s";
+        out << "-------rocsparseBILU0::analyze_matrix(): " << c_analysis << " s (+" << t_analysis.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 
@@ -228,7 +237,7 @@ bool rocsparseBILU0<Scalar, block_size>::
 create_preconditioner(BlockedMatrix<Scalar>*,
                       BlockedMatrix<Scalar>*)
 {
-    Timer t;
+    Timer t_decomposition;
     bool result = true;
 
     if constexpr (std::is_same_v<Scalar,float>) {
@@ -251,14 +260,22 @@ create_preconditioner(BlockedMatrix<Scalar>*,
     if (rocsparse_status_success != status)
     {
         printf("L has structural and/or numerical zero at L(%d,%d)\n", zero_position, zero_position);
+        if (verbosity >= 3) {
+            HIP_CHECK(hipStreamSynchronize(this->stream));
+            std::ostringstream out;
+            c_decomp += t_decomposition.stop();
+            out << "-------rocsparseBILU0 cum decomposition:  " << c_decomp << " s (+" << t_decomposition.elapsed() << " s)";
+            OpmLog::info(out.str());
+        }
         return false;
     }
 
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(this->stream));
-        std::ostringstream out;
-        out << "rocsparseBILU0::create_preconditioner(): " << t.stop() << " s";
-        OpmLog::info(out.str());
+            std::ostringstream out;
+            c_decomp += t_decomposition.stop();
+            out << "-------rocsparseBILU0 cum decomposition:  " << c_decomp << " s (+" << t_decomposition.elapsed() << " s)";
+            OpmLog::info(out.str());
     }
     return result;
 } // end create_preconditioner()
@@ -266,7 +283,7 @@ create_preconditioner(BlockedMatrix<Scalar>*,
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
 copy_system_to_gpu(Scalar *d_Avals) {
-    Timer t;
+    Timer t_copyToGpu;
     bool use_multithreading = true;
 
 #if HAVE_OPENMP
@@ -289,7 +306,8 @@ copy_system_to_gpu(Scalar *d_Avals) {
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(this->stream));
         std::ostringstream out;
-        out << "rocsparseBILU0::copy_system_to_gpu(): " << t.stop() << " s";
+        c_copy += t_copyToGpu.stop();
+        out << "-------rocsparseBILU0::copy_system_to_gpu():    " << c_copy << " s (+" << t_copyToGpu.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 } // end copy_system_to_gpu()
@@ -298,7 +316,7 @@ copy_system_to_gpu(Scalar *d_Avals) {
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
 update_system_on_gpu(Scalar *d_Avals) {
-    Timer t;
+    Timer t_copyToGpu;
     bool use_multithreading = true;
 
 #if HAVE_OPENMP
@@ -319,7 +337,8 @@ update_system_on_gpu(Scalar *d_Avals) {
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(this->stream));
         std::ostringstream out;
-        out << "rocsparseSolver::update_system_on_gpu(): " << t.stop() << " s";
+        c_copy += t_copyToGpu.stop();
+        out << "-------rocsparseSolver::update_system_on_gpu(): " << c_copy << " s (+" << t_copyToGpu.elapsed() << " s)";
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
@@ -365,12 +384,19 @@ apply(Scalar& y, Scalar& x) {
                                                d_buffer));
     }
         
-    if (verbosity >= 4) {
-        std::ostringstream out;
-        HIP_CHECK(hipStreamSynchronize(this->stream));
-        out << "rocsparseBILU0 apply: " << t_apply.stop() << " s";
-        OpmLog::info(out.str());
+    if (verbosity >= 3) {
+//         HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_ilu0_apply += t_apply.stop();
+//         out << "rocsparseBILU0 apply: " << t_apply.stop() << " s";
+//         OpmLog::info(out.str());
     }
+}
+
+template<class Scalar, unsigned int block_size>
+void rocsparseBILU0<Scalar,block_size>::
+printPrecApplyTimes(std::ostringstream* out)
+{
+        *out << "-------rocsparseCPR::cum ilu0_apply:  " << c_ilu0_apply << " s\n";
 }
 
 #define INSTANTIATE_TYPE(T)             \

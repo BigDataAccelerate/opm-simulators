@@ -45,7 +45,7 @@ protected:
     int nnz = 0;     // number of nonzeroes of the matrix (scalar)
     int nnzb = 0;    // number of blocks of the matrix
     int verbosity = 0;
-
+    
     Preconditioner(int verbosity_) :
     verbosity(verbosity_)
     {};
@@ -78,6 +78,8 @@ public:
     virtual bool create_preconditioner(BlockedMatrix<Scalar>* mat) = 0;
     virtual bool create_preconditioner(BlockedMatrix<Scalar>* mat,
                                        BlockedMatrix<Scalar>* jacMat) = 0;
+                                       
+    virtual void printPrecApplyTimes(std::ostringstream* out) = 0;
 };
 
 } // namespace Opm::Accelerator
