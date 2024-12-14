@@ -251,11 +251,23 @@ amg_cycle_gpu(const int level,
     ROCSPARSE_CHECK(rocsparse_create_mat_descr(&descr_R));
 
     if (level == this->num_levels - 1) {
+        Timer t_amg_copy1;
         // solve coarsest level
         std::vector<Scalar> h_y(Ncur), h_x(Ncur, 0);
 
         HIP_CHECK(hipMemcpyAsync(h_y.data(), &y, sizeof(Scalar) * Ncur, hipMemcpyDeviceToHost, this->stream));
         
+        if (verbosity >= 3) {
+            HIP_CHECK(hipStreamSynchronize(this->stream));
+            c_amg_coursecopy += t_amg_copy1.stop();
+            if(verbosity >= 4){
+                std::ostringstream out;
+                out << "---------------DH copy: " << t_amg_copy1.elapsed() << " s";
+                OpmLog::info(out.str());
+            }
+        }
+        
+        Timer t_amg_compute;
         // The if constexpr is needed to make the code compile
         // since the umfpack member is an 'int' with float Scalar.
         // We will never get here with float Scalar as we throw earlier.
@@ -263,8 +275,28 @@ amg_cycle_gpu(const int level,
         if constexpr (std::is_same_v<Scalar,double>) {
             this->umfpack.apply(h_x.data(), h_y.data());
         }
-
+    
+        if (verbosity >= 3) {
+            c_amg_coursecompute += t_amg_compute.stop();
+            if(verbosity >= 4){
+                std::ostringstream out;
+                out << "---------------umf compute: " << t_amg_compute.elapsed() << " s";
+                OpmLog::info(out.str());
+            }
+        }
+        
+        Timer t_amg_copy2;
         HIP_CHECK(hipMemcpyAsync(&x, h_x.data(), sizeof(Scalar) * Ncur, hipMemcpyHostToDevice, this->stream));
+        
+        if (verbosity >= 3) {
+            HIP_CHECK(hipStreamSynchronize(this->stream));
+            c_amg_coursecopy += t_amg_copy2.stop();
+            if(verbosity >= 4){
+                std::ostringstream out;
+                out << "---------------HD copy: " << t_amg_copy2.elapsed() << " s";
+                OpmLog::info(out.str());
+            }
+        }
         
         return;
     }
@@ -275,16 +307,38 @@ amg_cycle_gpu(const int level,
     RocmVector<Scalar>& f = d_f[level];
     RocmVector<Scalar>& u = d_u[level]; // u was 0-initialized earlier
 
+    Timer t_presmooth;
     // presmooth
     Scalar jacobi_damping = 0.65; // default value in amgcl: 0.72
     for (unsigned i = 0; i < this->num_pre_smooth_steps; ++i){
         HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, t.nnzValues, Ncur, 1, this->stream);
         HipKernels<Scalar>::vmul(jacobi_damping, d_invDiags[level].nnzValues, t.nnzValues, &x, Ncur, this->stream);
     }
-
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_presmooth += t_presmooth.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------presmooth time: " << t_presmooth.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
+    
+    Timer t_residual;
     // move to coarser level
     HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, t.nnzValues, Ncur, 1, this->stream);
 
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_residual += t_residual.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------residual time1: " << t_residual.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
+
+     Timer t_spmv;
 // TODO: understand why rocsparse spmv library function does not here. 
 //     ROCSPARSE_CHECK(rocsparse_dbsrmv(this->handle, this->dir, this->operation,
 //                                          R->Nb, R->Mb, R->nnzbs, &one, descr_R,
@@ -292,14 +346,45 @@ amg_cycle_gpu(const int level,
 //                                          t.nnzValues, &zero, f.nnzValues));
     HipKernels<Scalar>::spmv(R->nnzValues, R->colIndices, R->rowPointers, t.nnzValues, f.nnzValues, Nnext, 1, this->stream);
 
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_spmv += t_spmv.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------spmv time: " << t_spmv.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
+     
     amg_cycle_gpu(level + 1, *f.nnzValues, *u.nnzValues);
+    
+    Timer t_prolongate;
     HipKernels<Scalar>::prolongate_vector(u.nnzValues, &x, d_PcolIndices[level].nnzValues, Ncur, this->stream);
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_prolongate += t_prolongate.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------prolongate time: " << t_prolongate.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
 
+    Timer t_postsmooth;
     // postsmooth
     for (unsigned i = 0; i < this->num_post_smooth_steps; ++i){
         HipKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, &x, &y, t.nnzValues, Ncur, 1, this->stream);
         HipKernels<Scalar>::vmul(jacobi_damping, d_invDiags[level].nnzValues, t.nnzValues, &x, Ncur, this->stream);
     }
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_postsmooth += t_postsmooth.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------postsmooth time: " << t_postsmooth.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
 }
 
 // x = prec(y)
@@ -310,17 +395,59 @@ apply_amg(const Scalar& y,
 {
     HIP_CHECK(hipMemsetAsync(d_coarse_x.data()->nnzValues, 0, sizeof(Scalar) * this->Nb, this->stream));
     
+    Timer t_upload;
     for (unsigned int i = 0; i < d_u.size(); ++i) {
         d_u[i].upload(this->Rmatrices[i].nnzValues.data(), this->stream);
     }
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_Dupload += t_upload.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------d_u upload time: " << t_upload.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
     
+    Timer t_residual;
     HipKernels<Scalar>::residual(d_mat->nnzValues, d_mat->colIndices, d_mat->rowPointers, &x, &y, d_rs.data()->nnzValues, this->Nb, block_size, this->stream);
+
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_residual += t_residual.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------residual time2: " << t_residual.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
     
+    Timer t_restriction;
     HipKernels<Scalar>::full_to_pressure_restriction(d_rs.data()->nnzValues, d_weights.data()->nnzValues, d_coarse_y.data()->nnzValues, Nb, this->stream);
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_restriction += t_restriction.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------P extraction time: " << t_restriction.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
     
     amg_cycle_gpu(0, *(d_coarse_y.data()->nnzValues), *(d_coarse_x.data()->nnzValues));
 
+    Timer t_correction;
     HipKernels<Scalar>::add_coarse_pressure_correction(d_coarse_x.data()->nnzValues, &x, this->pressure_idx, Nb, this->stream);
+    
+    if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(this->stream));
+        c_amg_correction += t_correction.stop();
+        if(verbosity >= 4){
+            std::ostringstream out;
+            out << "---------------P correction time: " << t_correction.elapsed() << " s";
+            OpmLog::info(out.str());
+        }
+     }
 }
 
 template <class Scalar, unsigned int block_size>
@@ -361,6 +488,16 @@ printPrecApplyTimes(std::ostringstream* out)
 {
         *out << "-------rocsparseCPR::cum ilu0_apply:  " << c_cprilu0_apply << " s\n";
         *out << "-------rocsparseCPR::cum amg_apply:   " << c_amg_apply << " s\n";
+        *out << "--------------------  P restriction:    " << c_amg_restriction << " s\n";
+        *out << "--------------------  residual:         " << c_amg_residual << " s\n";
+        *out << "--------------------  spmv:             " << c_amg_spmv << " s\n";
+        *out << "--------------------  Dupload:          " << c_amg_Dupload << " s\n";
+        *out << "--------------------  copy umfpack:     " << c_amg_coursecopy << " s\n";
+        *out << "--------------------  compute umfpack:  " << c_amg_coursecompute << " s\n";
+        *out << "--------------------  prolongate:       " << c_amg_prolongate << " s\n";
+        *out << "--------------------  P correction:     " << c_amg_correction << " s\n";
+        *out << "--------------------  presmooth:        " << c_amg_presmooth << " s\n";
+        *out << "--------------------  postsmooth:       " << c_amg_postsmooth << " s\n";
 }
 
 #define INSTANTIATE_TYPE(T)           \

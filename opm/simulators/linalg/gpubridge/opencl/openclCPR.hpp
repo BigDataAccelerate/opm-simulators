@@ -75,6 +75,16 @@ private:
     double c_copy_cpr = 0.0;
     double c_amg_apply = 0.0;
     double c_cprilu0_apply = 0.0;
+    double c_amg_coursecopy = 0.0;
+    double c_amg_coursecompute = 0.0;
+    double c_amg_residual = 0.0;
+    double c_amg_restriction = 0.0;
+    double c_amg_correction = 0.0;
+    double c_amg_Dupload = 0.0;
+    double c_amg_spmv = 0.0;
+    double c_amg_prolongate = 0.0;
+    double c_amg_presmooth = 0.0;
+    double c_amg_postsmooth = 0.0;
 
     // Initialize and allocate matrices and vectors
     void init_opencl_buffers();

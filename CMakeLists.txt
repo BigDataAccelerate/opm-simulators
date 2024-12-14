@@ -707,6 +707,12 @@ if(USE_GPU_BRIDGE)
   if(VexCL_FOUND)
     target_link_libraries( opmsimulators PUBLIC OPM::VexCL::OpenCL )
   endif()
+  
+  if(hip_FOUND)
+   set(AMDGPU_TARGETS "gfx900")
+   message(STATUS "AMDGPU_TARGETS: ${AMDGPU_TARGETS}")
+   target_link_libraries( opmsimulators PUBLIC hip::device )
+  endif()
 endif()
 
 if(USE_DAMARIS_LIB AND Damaris_FOUND)
