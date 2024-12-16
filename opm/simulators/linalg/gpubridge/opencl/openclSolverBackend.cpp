@@ -306,7 +306,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
             OpenclKernels<Scalar>::custom(d_p, d_v, d_r, omega, beta, N);
         }
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_rest.stop();
             t_prec.start();
         }
@@ -314,7 +314,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
         // pw = prec(p)
         prec->apply(d_p, d_pw);
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_prec.stop();
             t_spmv.start();
         }
@@ -322,7 +322,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
         // v = A * pw
         OpenclKernels<Scalar>::spmv(d_Avals, d_Acols, d_Arows, d_pw, d_v, Nb, block_size);
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_spmv.stop();
             t_well.start();
         }
@@ -332,7 +332,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
             static_cast<WellContributionsOCL<Scalar>&>(wellContribs).apply(d_pw, d_v);
         }
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_well.stop();
             t_rest.start();
         }
@@ -347,7 +347,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
         OpenclKernels<Scalar>::axpy(d_pw, alpha, d_x, N);      // x = x + alpha * pw
         norm = OpenclKernels<Scalar>::norm(d_r, d_tmp, N);
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_rest.stop();
         }
 
@@ -363,7 +363,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
         }
         prec->apply(d_r, d_s);
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_prec.stop();
             t_spmv.start();
         }
@@ -371,7 +371,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
         // t = A * s
         OpenclKernels<Scalar>::spmv(d_Avals, d_Acols, d_Arows, d_s, d_t, Nb, block_size);
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_spmv.stop();
             t_well.start();
         }
@@ -381,7 +381,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
             static_cast<WellContributionsOCL<Scalar>&>(wellContribs).apply(d_s, d_t);
         }
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_well.stop();
             t_rest.start();
         }
@@ -393,7 +393,7 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
         OpenclKernels<Scalar>::axpy(d_t, -omega, d_r, N);    // r = r - omega * t
         norm = OpenclKernels<Scalar>::norm(d_r, d_tmp, N);
         if (verbosity >= 3) {
-           // queue->finish();
+            queue->finish();
             t_rest.stop();
         }
 

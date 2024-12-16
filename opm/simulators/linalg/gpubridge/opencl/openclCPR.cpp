@@ -95,6 +95,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_,
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_, jacMat);
     if (verbosity >= 3) {
+        queue->finish();
         c_decomp_ilu += t_bilu0.stop(); 
         std::ostringstream out;
         out << "-----openclCPR cum create_preconditioner bilu0(): " << c_decomp_ilu << " s (+" << t_bilu0.elapsed() <<" s)";
@@ -105,6 +106,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_,
     this->create_preconditioner_amg(this->mat); // already points to bilu0::rmat if needed
     
     if (verbosity >= 3) {
+        queue->finish();
         c_decomp_amg += t_amg.stop();
         std::ostringstream out;
         out << "-----openclCPR cum create_preconditioner_amg():   " << c_decomp_amg << " s (+" << t_amg.elapsed() <<" s)";
@@ -119,6 +121,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_,
     // upload matrices and vectors to GPU
     opencl_upload();
     if (verbosity >= 3) {
+        queue->finish();
         c_copy_cpr += t_copy_cpr.stop();
         std::ostringstream out;
         out << "-----openclCPR cum opencl_upload():               " << c_copy_cpr << " s (+" << t_copy_cpr.elapsed() <<" s)";
@@ -134,6 +137,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_) {
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_);
     if (verbosity >= 3) {
+        queue->finish();
         c_decomp_ilu += t_bilu0.stop(); 
         std::ostringstream out;
         out << "-----openclCPR cum create_preconditioner bilu0(): " << c_decomp_ilu << " s (+" << t_bilu0.elapsed() <<" s)";
@@ -143,6 +147,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_) {
     Dune::Timer t_amg;
     this->create_preconditioner_amg(this->mat); // already points to bilu0::rmat if needed
     if (verbosity >= 3) {
+        queue->finish();
         c_decomp_amg += t_amg.stop();
         std::ostringstream out;
         out << "-----openclCPR cum create_preconditioner_amg():   " << c_decomp_amg << " s (+" << t_amg.elapsed() <<" s)";
@@ -157,6 +162,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat_) {
     // upload matrices and vectors to GPU
     opencl_upload();
     if (verbosity >= 3) {
+        queue->finish();
         c_copy_cpr += t_copy_cpr.stop();
         std::ostringstream out;
         out << "-----openclCPR cum opencl_upload():               " << c_copy_cpr << " s (+" << t_copy_cpr.elapsed() <<" s)";
@@ -243,6 +249,7 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
             OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueReadBuffer error");
         }
         if (verbosity >= 3) {
+            queue->finish();
             c_amg_coursecopy += t_amg_copy1.stop();
             if(verbosity >= 4){
                 std::ostringstream out;
@@ -259,6 +266,7 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
             this->umfpack.apply(h_x.data(), h_y.data());
         }
         if (verbosity >= 3) {
+            queue->finish();
             c_amg_coursecompute += t_amg_compute.stop();
             if(verbosity >= 4){
                 std::ostringstream out;
@@ -278,6 +286,7 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
             OPM_THROW(std::logic_error, "openclCPR OpenCL enqueueWriteBuffer error");
         }
         if (verbosity >= 3) {
+            queue->finish();
             c_amg_coursecopy += t_amg_copy2.stop();
             if(verbosity >= 4){
                 std::ostringstream out;
@@ -301,6 +310,7 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
         OpenclKernels<Scalar>::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
     }
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_presmooth += t_presmooth.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -313,6 +323,7 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
     // move to coarser level
     OpenclKernels<Scalar>::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_residual += t_residual.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -325,6 +336,7 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
     OpenclKernels<Scalar>::spmv(R->nnzValues, R->colIndices, R->rowPointers, t, f, Nnext, 1, true);
     
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_spmv += t_spmv.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -338,6 +350,7 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
     Timer t_prolongate;
     OpenclKernels<Scalar>::prolongate_vector(u, x, d_PcolIndices[level], Ncur);
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_prolongate += t_prolongate.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -354,6 +367,7 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
         OpenclKernels<Scalar>::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
     }
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_postsmooth += t_postsmooth.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -383,6 +397,7 @@ void openclCPR<Scalar,block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x)
         OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
     }
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_Dupload += t_upload.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -395,6 +410,7 @@ void openclCPR<Scalar,block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x)
     OpenclKernels<Scalar>::residual(d_mat->nnzValues, d_mat->colIndices,
                                     d_mat->rowPointers, x, y, *d_rs, this->Nb, block_size);
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_residual += t_residual.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -406,6 +422,7 @@ void openclCPR<Scalar,block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x)
     Timer t_restriction;
     OpenclKernels<Scalar>::full_to_pressure_restriction(*d_rs, *d_weights, *d_coarse_y, this->Nb);
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_restriction += t_restriction.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -419,6 +436,7 @@ void openclCPR<Scalar,block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x)
     Timer t_correction;
     OpenclKernels<Scalar>::add_coarse_pressure_correction(*d_coarse_x, x, this->pressure_idx, this->Nb);
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_correction += t_correction.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -435,6 +453,7 @@ apply(const cl::Buffer& y, cl::Buffer& x)
     Dune::Timer t_bilu0;
     bilu0->apply(y, x);
     if (verbosity >= 3) {
+        queue->finish();
         c_cprilu0_apply += t_bilu0.stop();
         if(verbosity >= 4){
             std::ostringstream out;
@@ -446,6 +465,7 @@ apply(const cl::Buffer& y, cl::Buffer& x)
     Dune::Timer t_amg;
     apply_amg(y, x);
     if (verbosity >= 3) {
+        queue->finish();
         c_amg_apply += t_amg.stop();
         if(verbosity >= 4){
             std::ostringstream out;
